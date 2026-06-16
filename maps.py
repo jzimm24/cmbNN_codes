@@ -4,6 +4,26 @@ import csv
 from datetime import datetime
 
 def make_circle_map(map_size: int = 32, radius: float = 10, cx: float = 16, cy: float = 16):
+    """
+    Create a simple image of shape (map_size, map_size) with a circle defined by radius and offsets (cx, cy).
+    The image has zero values except for pixels belonging to the circle.
+
+    Parameters
+    ----------
+    map_size : int
+        Image width & height in pixels.
+    radius : float
+        Radius of the circle.
+    cx : float
+        position of circle center in the x-dim.
+    cy : float
+        position of circle center in the y-dim.
+
+    Returns
+    -------
+    Z : 2D np.ndarray
+        Map of circle.
+    """
     x = np.linspace(0, map_size-1, map_size)
     y = np.linspace(0, map_size-1, map_size)
     X, Y = np.meshgrid(x, y)
@@ -11,6 +31,28 @@ def make_circle_map(map_size: int = 32, radius: float = 10, cx: float = 16, cy: 
     return Z
 
 def make_multiple_circle_map(map_size: int = 32, number_circles: int = 1,  radius: list[float] = [10], cx: list[float] = [16], cy: list[float] = [16]):
+    """
+    Create image of shape (map_size, map_size) with multiple circles defined by radius and offsets (cx, cy).
+    The image has zero values except for pixels belonging to the circles.
+
+    Parameters
+    ----------
+    map_size : int
+        Image width & height in pixels.
+    number_circles : int
+        number of circles in the image.
+    radius : list[float]
+        radii of the circles.
+    cx : list[float]
+        positions of circle-centers in the x-dim.
+    cy : list[float]
+        positions of circle-centers in the y-dim.
+
+    Returns
+    -------
+    Z_final : 2D np.ndarray
+        Map of multiple circles.
+    """
     x = np.linspace(0, map_size-1, map_size)
     y = np.linspace(0, map_size-1, map_size)
     X, Y = np.meshgrid(x, y)
@@ -23,6 +65,41 @@ def make_multiple_circle_map(map_size: int = 32, number_circles: int = 1,  radiu
 
 def make_random_circle_maps(n: int = 1, map_size: int = 32, radius_mean: float = 10, radius_var: float = 0, radius_min: float = 2, 
                             cx_mean: float = 16, cx_var: float = 0, cy_mean: float = 16, cy_var: float = 0, max_shift: float = 10, seed: int = 42):
+    """
+    Create images of shape (map_size, map_size) with circle defined by random radii and offsets (cx, cy).
+    The images have zero values except for pixels belonging to the circle.
+    The values of the circle parameters are sampled from a gaussian distr.
+
+    Parameters
+    ----------
+    n : int
+        number of images
+    map_size : int
+        Image width & height in pixels.
+    radius_mean : float
+        Mean of the gauss distr. of which the radii are sampled.
+    radius_var  : float
+        Variance of the gauss distr. of which the radii are sampled.
+    radius_min  : float
+        minimal radius a circle must have before resampling is triggered.
+    cx_mean : float
+        Mean of the gauss distr. of which the cx values are sampled.
+    cx_var  : float
+        Variance of the gauss distr. of which the cx values are sampled.
+    cy_mean : float
+        Mean of the gauss distr. of which the cy values are sampled.
+    cy_var  : float
+        Variance of the gauss distr. of which the cy values are sampled.
+    max_shift  : float
+        Maximal positional shift a circle-center can have before resampling is triggered.
+    seed    : int
+        seed for the randomization in parameter sampling.
+
+    Returns
+    -------
+    Z_final : 2D np.ndarray
+        Map of multiple circles.
+    """
     rng = np.random.default_rng(seed)
     radii = rng.normal(radius_mean, radius_var, n).clip(min = radius_min)
     cx_shifts = rng.normal(cx_mean, cx_var, n).clip(max=max_shift)
@@ -38,6 +115,46 @@ def make_random_circle_maps(n: int = 1, map_size: int = 32, radius_mean: float =
 
 def make_random_multiple_circle_maps(n: int = 1, map_size: int = 32, max_number_circles: int = 1, radius_mean: float = 10, radius_var: float = 0, radius_min: float = 2, 
                             cx_mean: float = 16, cx_var: float = 0, cy_mean: float = 16, cy_var: float = 0, max_shift: float = 10, seed: int = 42):
+    """
+    Create images of shape (map_size, map_size) with multiple circles defined by random radii and offsets (cx, cy).
+    The images have zero values except for pixels belonging to the circles.
+    The values of the circle parameters are sampled from a gaussian distr.
+
+    Parameters
+    ----------
+    n : int
+        number of images
+    map_size : int
+        Image width & height in pixels.
+    max_number_circles: int
+        Maximal number of circles one image can have. The number of circle
+        is the sample from a linear distribution between zero and said maximum.
+    radius_mean : float
+        Mean of the gauss distr. of which the radii are sampled.
+    radius_var  : float
+        Variance of the gauss distr. of which the radii are sampled.
+    radius_min  : float
+        minimal radius a circle must have before resampling is triggered.
+    cx_mean : float
+        Mean of the gauss distr. of which the cx values are sampled.
+    cx_var  : float
+        Variance of the gauss distr. of which the cx values are sampled.
+    cy_mean : float
+        Mean of the gauss distr. of which the cy values are sampled.
+    cy_var  : float
+        Variance of the gauss distr. of which the cy values are sampled.
+    max_shift  : float
+        Maximal positional shift a circle-center can have before resampling is triggered.
+    seed    : int
+        seed for the randomization in parameter sampling.
+
+    Returns
+    -------
+    circle_images : 2D np.ndarray
+        Maps of multiple circles.
+    doc : 
+        dictionary with list of circle parameters
+    """
     rng = np.random.default_rng(seed)
 
     circle_images = np.zeros((n, map_size, map_size))
@@ -56,6 +173,25 @@ def make_random_multiple_circle_maps(n: int = 1, map_size: int = 32, max_number_
     return circle_images, doc
 
 def make_noise_maps(n: int = 1, map_size: int = 32, noise_max: float = 10, seed: int = 42):
+    """
+    Create images of shape (map_size, map_size) with white noise.
+
+    Parameters
+    ----------
+    n : int
+        number of images
+    map_size : int
+        Image width & height in pixels.
+    noise_max   : float
+        Amplitude of the white noise.
+    seed    : int
+        seed for the randomization in parameter sampling.
+
+    Returns
+    -------
+    Z_final : 2D np.ndarray
+        Maps of white noise.
+    """
     noise_maps = np.zeros((n, map_size, map_size))
     rng = np.random.default_rng(seed)
     for i in range(n):
@@ -64,11 +200,34 @@ def make_noise_maps(n: int = 1, map_size: int = 32, noise_max: float = 10, seed:
     return noise_maps
 
 def save_maps(maps, ground_truths, doc, file_name: str = "circle_maps"):
-    radii = np.array([m["radius"] for m in doc])
-    cx_shifts = np.array([m["cx_shift"] for m in doc])
-    cy_shifts = np.array([m["cy_shift"] for m in doc])
+    """
+    Saves noisy images their ground_truths and their circle parameters in a npz file.
 
-    np.savez(file_name + ".npz", maps=maps, ground_truths=ground_truths, radii=radii, cx_shifts=cx_shifts, cy_shifts=cy_shifts)
+    Parameters
+    ----------
+    maps : 
+        Array of 2d maps (noisy maps)
+    ground_truths : 
+        Array of 2d maps (no noise maps/ground_truths)
+    file_name   : str
+        Path for npz file.
+
+    Returns
+    ---------
+    
+    """
+    radii = [m["radius"] for m in doc]
+    cx_shifts = [m["cx_shift"] for m in doc]
+    cy_shifts = [m["cy_shift"] for m in doc]
+
+    np.savez(
+    file_name + ".npz",
+    maps=maps,
+    ground_truths=ground_truths,
+    radii=np.array(radii, dtype=object),
+    cx_shifts=np.array(cx_shifts, dtype=object),
+    cy_shifts=np.array(cy_shifts, dtype=object)
+)
     print("File saved as ", file_name, ".npz")
     return None
 
@@ -689,147 +848,160 @@ def save_dataset_csv(outpath, noisy_images, clean_images, I0s):
             writer.writerow(row)
     print(f"Wrote CSV dataset -> {outpath} (rows={n}, cols={2*H*W+1})")
 
+# def main():
+#     images_noisy = []
+#     images_clean = []
+#     doc   = []
+
+#     rng = np.random.default_rng(seed)
+
+#     intermediate_imgs = []
+
+#     for i in range(num_images):
+
+#         source_number = rng.integers(0, max_source_number, endpoint=True)
+
+#         # 1) β‐model
+#         #img, I0 = generate_beta_model_image(image_size, core_radius,
+#         #                                    I0=I0_fixed)
+
+#         if flux_mode == 'lin':
+#             img = np.zeros((image_size, image_size))
+#             I0 = []
+#             rc_used = []
+#             for k in range(source_number):
+#                 x_shift = min(rng.normal(x_shift_mean, x_shift_var), x_shift_max)
+#                 y_shift = min(rng.normal(y_shift_mean, y_shift_var), y_shift_max)
+#                 img_current, I0_current, rc_used_current = generate_beta_model_image(
+#                     size=image_size,
+#                     rc_mean=rc_mean,
+#                     rc_sigma=rc_sigma,
+#                     x_shift=x_shift,
+#                     y_shift=y_shift,
+#                     I0_range=I0_range,      # e.g. (0.5,1.0)
+#                     I0_fixed=I0_fixed       # or None
+#                 )
+#                 intermediate_imgs.append(img_current)
+#                 img += img_current
+#                 I0.append(I0_current)
+#                 rc_used.append(rc_used_current)
+
+#         elif flux_mode == 'log':
+#             img = np.zeros((image_size, image_size))
+#             I0 = []
+#             rc_used = []
+#             for k in range(source_number):
+#                 img_current, I0_current, rc_used_current = generate_beta_model_image_logI0(
+#                     size=image_size,
+#                     rc_mean=rc_mean,
+#                     rc_sigma=rc_sigma,
+#                     x_shift=x_shift,
+#                     y_shift=y_shift,
+#                     I0_range=I0_range,      # e.g. (0.1,1.0)
+#                     I0_fixed=I0_fixed       # or None
+#                 )
+#                 img += img_current
+#                 I0.append(I0_current)
+#                 rc_used.append(rc_used_current)
+
+#         elif flux_mode == 'gauss':
+#             img = np.zeros((image_size, image_size))
+#             I0 = []
+#             rc_used = []
+#             for k in range(source_number):
+#                 img_current, I0_current, rc_used_current = generate_beta_model_image_gaussI0(
+#                     size=image_size,
+#                     rc_mean=rc_mean,
+#                     rc_sigma=rc_sigma,
+#                     x_shift=x_shift,
+#                     y_shift=y_shift,
+#                     I0_mean=I0_mean,        # Gaussian mean
+#                     I0_sigma=I0_sigma,      # Gaussian std-dev
+#                     I0_fixed=I0_fixed       # or None
+#                 )
+#                 img += img_current
+#                 I0.append(I0_current)
+#                 rc_used.append(rc_used_current)
+#         else:
+#             raise ValueError(f"Unknown flux_mode '{flux_mode}'. Choose 'lin', 'log', or 'gauss'.")
+        
+#         # 2) noise
+#         w = generate_white_noise(img.shape, white_noise_amplitude)
+
+#         # #THIS ONE WITH PHASE RANDOMIZATION
+#         # n1f = generate_1overf_noise(img.shape, one_over_f_slope,
+#         #                             one_over_f_amplitude)
+        
+#         ## THIS ONE WITH STRICT HERMITIAN SYMMETRY
+#         n1f = strict_1overf_noise(img.shape, one_over_f_slope,
+#                                     one_over_f_amplitude)
+
+#         # 3) optional smoothing:
+#         #    White noise originates in the detector timestreams and is therefore
+#         #    NOT convolved with the telescope beam. Only the signal and the
+#         #    red (1/f, atmospheric) noise component are beam-smoothed.
+#         smoothed = apply_gaussian_smoothing(img + n1f, gaussian_smoothing_fwhm)
+#         final = smoothed + w   # add unsmoothed white noise after beam convolution
+
+#         ## ADDING AN EXTRA STEP TO REMOVE ENTIRE IMAGE MEAN <-- FOR TESTING !!
+#         ## final -= final.mean()
+
+#         # append to lists
+#         images_clean.append(img.astype(np.float32))
+#         images_noisy.append(final.astype(np.float32))
+#         doc.append({"index": i, "rc_used": rc_used, "number_sources": source_number})
+
+#     #------------------------------------------------------------------------------------------------------------------------------
+
+#     # save_images_to_csv(images, labels, output_csv)
+#     if save_mode == 'hdf5':
+#         # save_dataset_hdf5(output_h5, images_noisy, images_clean, labels_I0)
+        
+#         # Option 1: Recommended - LZF compression (good balance)
+#         save_dataset_hdf5(
+#             output_h5, 
+#             images_noisy, 
+#             images_clean, 
+#             doc,
+#             compression='lzf'  # Fast compression, ~50% size reduction
+#         )
+        
+#         # # Option 2: Maximum speed - No compression (if disk space is plentiful)
+#         # save_dataset_hdf5(
+#         #     output_h5, 
+#         #     images_noisy, 
+#         #     images_clean, 
+#         #     labels_I0,
+#         #     compression=None  # No compression, fastest I/O
+#         # )
+        
+#         # # Option 3: Smaller files - Light gzip (slightly slower training)
+#         # save_dataset_hdf5(
+#         #     output_h5, 
+#         #     images_noisy, 
+#         #     images_clean, 
+#         #     labels_I0,
+#         #     compression='gzip',
+#         #     compression_opts=1  # Level 1 = fast, level 9 = slow
+#         # )
+        
+#     else:
+#         save_dataset_csv(output_csv, images_noisy, images_clean, doc)
+
+
+#     return None
+
 def main():
-    images_noisy = []
-    images_clean = []
-    doc   = []
 
-    rng = np.random.default_rng(seed)
+    #number of images
+    n = 1000
+    #directory of data
+    filename = "../data/1k_64_multicircle_10xs20xy20"
 
-    intermediate_imgs = []
-
-    for i in range(num_images):
-
-        source_number = rng.integers(0, max_source_number, endpoint=True)
-
-        # 1) β‐model
-        #img, I0 = generate_beta_model_image(image_size, core_radius,
-        #                                    I0=I0_fixed)
-
-        if flux_mode == 'lin':
-            img = np.zeros((image_size, image_size))
-            I0 = []
-            rc_used = []
-            for k in range(source_number):
-                x_shift = min(rng.normal(x_shift_mean, x_shift_var), x_shift_max)
-                y_shift = min(rng.normal(y_shift_mean, y_shift_var), y_shift_max)
-                img_current, I0_current, rc_used_current = generate_beta_model_image(
-                    size=image_size,
-                    rc_mean=rc_mean,
-                    rc_sigma=rc_sigma,
-                    x_shift=x_shift,
-                    y_shift=y_shift,
-                    I0_range=I0_range,      # e.g. (0.5,1.0)
-                    I0_fixed=I0_fixed       # or None
-                )
-                intermediate_imgs.append(img_current)
-                img += img_current
-                I0.append(I0_current)
-                rc_used.append(rc_used_current)
-
-        elif flux_mode == 'log':
-            img = np.zeros((image_size, image_size))
-            I0 = []
-            rc_used = []
-            for k in range(source_number):
-                img_current, I0_current, rc_used_current = generate_beta_model_image_logI0(
-                    size=image_size,
-                    rc_mean=rc_mean,
-                    rc_sigma=rc_sigma,
-                    x_shift=x_shift,
-                    y_shift=y_shift,
-                    I0_range=I0_range,      # e.g. (0.1,1.0)
-                    I0_fixed=I0_fixed       # or None
-                )
-                img += img_current
-                I0.append(I0_current)
-                rc_used.append(rc_used_current)
-
-        elif flux_mode == 'gauss':
-            img = np.zeros((image_size, image_size))
-            I0 = []
-            rc_used = []
-            for k in range(source_number):
-                img_current, I0_current, rc_used_current = generate_beta_model_image_gaussI0(
-                    size=image_size,
-                    rc_mean=rc_mean,
-                    rc_sigma=rc_sigma,
-                    x_shift=x_shift,
-                    y_shift=y_shift,
-                    I0_mean=I0_mean,        # Gaussian mean
-                    I0_sigma=I0_sigma,      # Gaussian std-dev
-                    I0_fixed=I0_fixed       # or None
-                )
-                img += img_current
-                I0.append(I0_current)
-                rc_used.append(rc_used_current)
-        else:
-            raise ValueError(f"Unknown flux_mode '{flux_mode}'. Choose 'lin', 'log', or 'gauss'.")
-        
-        # 2) noise
-        w = generate_white_noise(img.shape, white_noise_amplitude)
-
-        # #THIS ONE WITH PHASE RANDOMIZATION
-        # n1f = generate_1overf_noise(img.shape, one_over_f_slope,
-        #                             one_over_f_amplitude)
-        
-        ## THIS ONE WITH STRICT HERMITIAN SYMMETRY
-        n1f = strict_1overf_noise(img.shape, one_over_f_slope,
-                                    one_over_f_amplitude)
-
-        # 3) optional smoothing:
-        #    White noise originates in the detector timestreams and is therefore
-        #    NOT convolved with the telescope beam. Only the signal and the
-        #    red (1/f, atmospheric) noise component are beam-smoothed.
-        smoothed = apply_gaussian_smoothing(img + n1f, gaussian_smoothing_fwhm)
-        final = smoothed + w   # add unsmoothed white noise after beam convolution
-
-        ## ADDING AN EXTRA STEP TO REMOVE ENTIRE IMAGE MEAN <-- FOR TESTING !!
-        ## final -= final.mean()
-
-        # append to lists
-        images_clean.append(img.astype(np.float32))
-        images_noisy.append(final.astype(np.float32))
-        doc.append({"index": i, "rc_used": rc_used, "number_sources": source_number})
-
-    #------------------------------------------------------------------------------------------------------------------------------
-
-    # save_images_to_csv(images, labels, output_csv)
-    if save_mode == 'hdf5':
-        # save_dataset_hdf5(output_h5, images_noisy, images_clean, labels_I0)
-        
-        # Option 1: Recommended - LZF compression (good balance)
-        save_dataset_hdf5(
-            output_h5, 
-            images_noisy, 
-            images_clean, 
-            doc,
-            compression='lzf'  # Fast compression, ~50% size reduction
-        )
-        
-        # # Option 2: Maximum speed - No compression (if disk space is plentiful)
-        # save_dataset_hdf5(
-        #     output_h5, 
-        #     images_noisy, 
-        #     images_clean, 
-        #     labels_I0,
-        #     compression=None  # No compression, fastest I/O
-        # )
-        
-        # # Option 3: Smaller files - Light gzip (slightly slower training)
-        # save_dataset_hdf5(
-        #     output_h5, 
-        #     images_noisy, 
-        #     images_clean, 
-        #     labels_I0,
-        #     compression='gzip',
-        #     compression_opts=1  # Level 1 = fast, level 9 = slow
-        # )
-        
-    else:
-        save_dataset_csv(output_csv, images_noisy, images_clean, doc)
-
-
+    multiple_circles_test_maps, multiple_circles_test_doc = make_random_multiple_circle_maps(n, 64, 3, 10, 5, 5, 32, 32, 32, 32, 40, 42)
+    noise_maps = make_noise_maps(n, 64, 3, 42)
+    multiple_circles_test_maps_withNoise = noise_maps + multiple_circles_test_maps
+    save_maps(multiple_circles_test_maps_withNoise, multiple_circles_test_maps, multiple_circles_test_doc, filename)
     return None
 
 if __name__ == "__main__":
