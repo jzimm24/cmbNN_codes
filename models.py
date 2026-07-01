@@ -123,20 +123,111 @@ def discriminator_loss(disc_real_output, disc_generated_output):
 
 # Discriminator
 
-class Discriminator(nn.Module):
-    def __init__(self, in_features):
-        super().__init__()
-        self.disc = nn.Sequential(
-            nn.Linear(in_features, 256),
-            nn.LeakyReLU(0.1),
-            nn.Linear(256, 128),
-            nn.LeakyReLU(0.1),
-            nn.Linear(128, 1),
-            nn.Sigmoid()
-        )
+# class Discriminator(nn.Module):
+#     def __init__(self, in_features):
+#         super().__init__()
+#         self.disc = nn.Sequential(
+#             nn.Linear(in_features, 256),
+#             nn.LeakyReLU(0.1),
+#             nn.Linear(256, 128),
+#             nn.LeakyReLU(0.1),
+#             nn.Linear(128, 1),
+#             nn.Sigmoid()
+#         )
+
+#     def forward(self, x):
+#         return self.disc(x)
+
+class Downsample(nn.Module):
+    def __init__(self, in_channels,out_channels, size, apply_batchnorm=True):
+        super(Downsample, self).__init__()
+        initializer = nn.init.normal_
+
+        self.apply_batchnorm = apply_batchnorm
+
+        self.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=4, kernel_size=size, stride=1, padding='same', bias=False)
+        initializer(self.conv1.weight, 0.0, 0.02)
+
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+
+        self.conv2 = nn.Conv2d(in_channels=4, out_channels=out_channels, kernel_size=size, stride=1, padding='same', bias=False)
+        initializer(self.conv2.weight, 0.0, 0.02)
+
+        if self.apply_batchnorm:
+            self.batchnorm = nn.BatchNorm2d(out_channels)
+
+        self.leaky_relu = nn.LeakyReLU(negative_slope=0.2, inplace=True)
 
     def forward(self, x):
-        return self.disc(x)
-    
+        x = self.conv1(x)
+        x = self.pool(x)
+        x = self.conv2(x)
 
+        if self.apply_batchnorm:
+            x = self.batchnorm(x)
+
+        x = self.leaky_relu(x)
+        return x
+
+class Upsample(nn.Module):
+    def __init__(self, in_channels,out_channels ,size, apply_dropout=False,apply_batchnorm=True):
+        super(Upsample, self).__init__()
+        initializer = nn.init.normal_
+
+        self.conv_transpose = nn.ConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=size, stride=2, padding=1, output_padding=0, bias=False)
+        initializer(self.conv_transpose.weight, 0.0, 0.02)
+        self.apply_batchnorm=apply_batchnorm
+        if self.apply_batchnorm:
+            self.batchnorm = nn.BatchNorm2d(out_channels)
+
+        self.apply_dropout = apply_dropout
+        if self.apply_dropout:
+            self.dropout = nn.Dropout(0.2)
+
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        x = self.conv_transpose(x)
+        if self.apply_batchnorm:
+            x = self.batchnorm(x)
+
+        if self.apply_dropout:
+            x = self.dropout(x)
+
+        x = self.relu(x)
+        return x
+    
+class Discriminator(nn.Module):
+    def __init__(self, nside, inly, outly):
+        super(Discriminator, self).__init__()
+
+        self.down1 = Downsample(inly+outly,4, 4, apply_batchnorm=False)  # (batch_size, 512, 512, 8)
+        self.down2 = Downsample(4,8, 4)  # (batch_size, 256, 256, 8)
+        self.down3 = Downsample(8,16, 4)  # (batch_size, 128, 128, 16)
+        self.down4 = Downsample(16,32, 4)  # (batch_size, 64, 64, 16)
+
+        self.zero_pad1 = nn.ZeroPad2d(1)  # Padding to ensure the dimensions match
+        self.conv = nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=0, bias=False)
+        self.batchnorm1 = nn.BatchNorm2d(16)
+        self.leaky_relu = nn.LeakyReLU(negative_slope=0.2, inplace=True)
+
+        self.zero_pad2 = nn.ZeroPad2d(1)  # Padding to ensure the dimensions match
+        self.last = nn.Conv2d(in_channels=16, out_channels=1, kernel_size=3, stride=1, padding=0)
+
+    def forward(self, inp, tar):
+        x = torch.cat([inp, tar], dim=1)  # (batch_size, 1024, 1024, channels*2)
+
+        x = self.down1(x)
+        x = self.down2(x)
+        x = self.down3(x)
+
+        x = self.zero_pad1(x)
+        x = self.conv(x)
+        x = self.batchnorm1(x)
+        x = self.leaky_relu(x)
+
+        x = self.zero_pad2(x)
+        x = self.last(x)
+
+        return x
 
