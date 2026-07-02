@@ -994,9 +994,9 @@ def save_dataset_csv(outpath, noisy_images, clean_images, I0s):
 def main():
 
     #number of images
-    n = 1000
+    n = 10000
     #directory of data
-    filename = "../data/1k_64_multicircle_10xs20xy20"
+    filename = "../data/10k_64_multicircle_32xs32xy40"
 
     multiple_circles_test_maps, multiple_circles_test_doc = make_random_multiple_circle_maps(n, 64, 3, 10, 5, 5, 32, 32, 32, 32, 40, 42)
     noise_maps = make_noise_maps(n, 64, 3, 42)
