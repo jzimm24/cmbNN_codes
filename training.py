@@ -12,12 +12,19 @@ from torch.utils.data import DataLoader, TensorDataset
 import cmbNN_codes.functions as functions
 import cmbNN_codes.models as models
 
+class DataFileFormatError(ValueError):
+    pass
+
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-NUM_EPOCHS = 1
-BATCH_SIZE = 32
+NUM_EPOCHS = 3
+BATCH_SIZE = 16
 LR = 1e-4
 IMG_DIM = 64
-DATA_FILE = "../data/1k_64_multicircle_10xs20xy20.npz"
+DATA_FILE = "../data/NEW-Dset_1F-unsmooth_10k128pix_lin04.h5"
+TRAIN_SPLIT = 1-0.05
+
+# no .pth
+trained_model_name = "../models/0307_real_noise_10k_model_3_32_1e-4"
 
 def init_models(in_chanels_gen: int = 1,
                 out_chanels_gen: int = 1,
@@ -44,10 +51,23 @@ def log_memory_usage():
         print(f"Max allocated memory: {torch.cuda.max_memory_allocated()} bytes")
 
 def data_load_and_prep(data_file = DATA_FILE):
-    data, sol, paras = functions.load_npz(data_file)
+    if data_file[-3:] == "npz":
+        data, sol, paras = functions.load_npz(data_file)
+        print("Data loading from .npz file")
+    elif data_file[-2:] == "h5":
+        data, sol = functions.load_h5py(data_file)
+        print("Data loading from .h5 file")
+    else:
+        raise DataFileFormatError(data_file[-5])
 
-    data_tensor = torch.from_numpy(data).float().unsqueeze(1)
-    sol_tensor = torch.from_numpy(sol).float().unsqueeze(1)
+    n_total = data.shape[0]
+    n_train = int(TRAIN_SPLIT*n_total)
+
+    data_train = data[:n_train]
+    sol_train = sol[:n_train]
+
+    data_tensor = torch.from_numpy(data_train).float().unsqueeze(1)
+    sol_tensor = torch.from_numpy(sol_train).float().unsqueeze(1)
     dataset = TensorDataset(data_tensor, sol_tensor)
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
     return dataloader
@@ -88,7 +108,7 @@ def training_loop(generator, gen_optimizer, discriminator, disc_optimizer, datal
 
     return generator, discriminator, num_epochs, current_gen_loss, current_disc_loss, current_gen_optimizer, current_disc_optimizer
 
-def training_and_saving_model(generator, gen_optimizer, discriminator, disc_optimizer, dataloader, num_epochs = NUM_EPOCHS, path = "../models/model", prev_epochs = 0):
+def training_and_saving_model(generator, gen_optimizer, discriminator, disc_optimizer, dataloader, num_epochs = NUM_EPOCHS, path = "../models/0307_real_noise_10k_model_3_32_1e-4", prev_epochs = 0):
     print("############################")
     print("Training model:")
     print("############################")
@@ -112,7 +132,7 @@ def main():
     generator, generator_optimizer, discriminator, discriminator_optimizer = init_models()
     generator.train()
     discriminator.train()
-    training_and_saving_model(generator, generator_optimizer, discriminator, discriminator_optimizer, dataloader)
+    training_and_saving_model(generator, generator_optimizer, discriminator, discriminator_optimizer, dataloader, path=trained_model_name)
     print("Done!")
     return None
 

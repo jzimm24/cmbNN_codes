@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import h5py
 
 
 def load_npz(path: str):
@@ -12,3 +13,9 @@ def load_npz(path: str):
     
     print(f"Loaded  X: {X.shape}  Y: {Y.shape}  y: {y.shape}")
     return X, Y, y
+
+def load_h5py(path: str):
+    with h5py.File(path, "r") as f:
+        X = f["clean"][:]
+        Y = f["noisy"][:]
+    return X, Y
