@@ -26,7 +26,7 @@ TRAIN_SPLIT = 1-0.05
 # no .pth
 trained_model_name = "../models/0307_real_noise_10k_model_3_32_1e-4"
 
-def init_models(in_chanels_gen: int = 1,
+def init_GAN_models(in_chanels_gen: int = 1,
                 out_chanels_gen: int = 1,
                 in_chanels_disc: int = 1,
                 out_chanels_disc: int = 1,
@@ -72,7 +72,7 @@ def data_load_and_prep(data_file = DATA_FILE):
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
     return dataloader
 
-def training_step(images, ground_truths, generator, gen_optimizer, discriminator, disc_optimizer):
+def training_step_GAN(images, ground_truths, generator, gen_optimizer, discriminator, disc_optimizer):
     # training step (forward and backwards pass of both generator and discriminator as well as parameter optimazation through gradient computation) for
     # one batch of image pairs in the dataloader
     images = images.to(DEVICE)  # move input to GPU
@@ -98,21 +98,21 @@ def training_step(images, ground_truths, generator, gen_optimizer, discriminator
 
     return gen_loss, disc_loss, gen_optimizer, disc_optimizer
 
-def training_loop(generator, gen_optimizer, discriminator, disc_optimizer, dataloader, num_epochs = NUM_EPOCHS):
+def training_loop_GAN(generator, gen_optimizer, discriminator, disc_optimizer, dataloader, num_epochs = NUM_EPOCHS):
     for epoch in range(num_epochs):
         for x, y in dataloader:
-            current_gen_loss, current_disc_loss, current_gen_optimizer, current_disc_optimizer = training_step(x, y, generator, gen_optimizer, discriminator, disc_optimizer)
+            current_gen_loss, current_disc_loss, current_gen_optimizer, current_disc_optimizer = training_step_GAN(x, y, generator, gen_optimizer, discriminator, disc_optimizer)
             print("Epoch: " + str(epoch))
             print("Loss Generator: " + str(current_gen_loss))
             print("Loss Discriminator: " + str(current_disc_loss))
 
     return generator, discriminator, num_epochs, current_gen_loss, current_disc_loss, current_gen_optimizer, current_disc_optimizer
 
-def training_and_saving_model(generator, gen_optimizer, discriminator, disc_optimizer, dataloader, num_epochs = NUM_EPOCHS, path = "../models/0307_real_noise_10k_model_3_32_1e-4", prev_epochs = 0):
+def training_and_saving_GAN_model(generator, gen_optimizer, discriminator, disc_optimizer, dataloader, num_epochs = NUM_EPOCHS, path = "../models/0307_real_noise_10k_model_3_32_1e-4", prev_epochs = 0):
     print("############################")
     print("Training model:")
     print("############################")
-    generator, discriminator, num_epochs, current_gen_loss, current_disc_loss, current_gen_optimizer, current_disc_optimizer = training_loop(generator, gen_optimizer, discriminator, disc_optimizer, dataloader, num_epochs)
+    generator, discriminator, num_epochs, current_gen_loss, current_disc_loss, current_gen_optimizer, current_disc_optimizer = training_loop_GAN(generator, gen_optimizer, discriminator, disc_optimizer, dataloader, num_epochs)
     checkpoint = {
     "epoch": num_epochs,
     "generator_state_dict": generator.state_dict(),
@@ -129,10 +129,10 @@ def training_and_saving_model(generator, gen_optimizer, discriminator, disc_opti
 
 def main():
     dataloader = data_load_and_prep()
-    generator, generator_optimizer, discriminator, discriminator_optimizer = init_models()
+    generator, generator_optimizer, discriminator, discriminator_optimizer = init_GAN_models()
     generator.train()
     discriminator.train()
-    training_and_saving_model(generator, generator_optimizer, discriminator, discriminator_optimizer, dataloader, path=trained_model_name)
+    training_and_saving_GAN_model(generator, generator_optimizer, discriminator, discriminator_optimizer, dataloader, path=trained_model_name)
     print("Done!")
     return None
 
