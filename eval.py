@@ -84,11 +84,11 @@ def make_figures(maps, save_path, title):
 
 
 def main():
-    model = load_model(path="../models/model_epoch_1.pth")
+    model = load_model(path="../models/0307_real_noise_10k_model_3_32_1e-4_epoch_3.pth")
     model.eval()
-    noisy, clean = load_random_sample("/home/user/Physik_Bonn/master_thesis/codes/cmbNN/data/NEW-Dset_1F-unsmooth_1k128pix_lin04.h5")
+    noisy, clean = load_random_sample("/home/user/Physik_Bonn/master_thesis/codes/cmbNN/data/NEW-Dset_1F-unsmooth_10k128pix_lin04.h5")
     noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
-    make_figures([noisy, prediction, clean], "../outputs/test_fig.png", "test_images")
+    make_figures([noisy, prediction, clean], "../outputs/0307test_fig.png", "0307_test_images")
     return None
 
 if __name__ == "__main__":
