@@ -12,36 +12,30 @@ from torch.utils.data import DataLoader, TensorDataset
 import cmbNN_codes.functions as functions
 import cmbNN_codes.models as models
 
+# ---------------------------------------------------------------------------------------------------------------------------------
+
 class DataFileFormatError(ValueError):
     pass
 
+class ModelArchitectureError(ValueError):
+    pass
+
+# ---------------------------------------------------------------------------------------------------------------------------------
+
+model = "UNET"
+
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-NUM_EPOCHS = 3
+NUM_EPOCHS = 1
 BATCH_SIZE = 16
 LR = 1e-4
-IMG_DIM = 64
-DATA_FILE = "../data/NEW-Dset_1F-unsmooth_10k128pix_lin04.h5"
+IMG_DIM = 128
+DATA_FILE = "../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5"
 TRAIN_SPLIT = 1-0.05
 
 # no .pth
-trained_model_name = "../models/0307_real_noise_10k_model_3_32_1e-4"
+trained_model_name = "../models/0507_unetTest_noWN_A7"
 
-def init_GAN_models(in_chanels_gen: int = 1,
-                out_chanels_gen: int = 1,
-                in_chanels_disc: int = 1,
-                out_chanels_disc: int = 1,
-                device = DEVICE,
-                img_dim = IMG_DIM,
-                lr_gen = LR,
-                lr_disc = LR):
-    generator = models.UNET(in_chanels_gen, out_chanels_gen).to(device)
-    generator_optimizer = torch.optim.Adam(generator.parameters(), lr=lr_gen)
-
-    #discriminator = models.Discriminator(img_dim)
-    discriminator = models.Discriminator(img_dim, in_chanels_disc, out_chanels_disc).to(device)
-    discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=lr_disc)
-
-    return generator, generator_optimizer, discriminator, discriminator_optimizer
+# General ---------------------------------------------------------------------------------------------------------------------------------
 
 def log_memory_usage():
     #!!! Taken from https://github.com/Obasho10/cmbnn/blob/main/train/train.py
@@ -49,6 +43,7 @@ def log_memory_usage():
     if DEVICE == "cuda":
         print(f"Allocated memory: {torch.cuda.memory_allocated()} bytes")
         print(f"Max allocated memory: {torch.cuda.max_memory_allocated()} bytes")
+    return None
 
 def data_load_and_prep(data_file = DATA_FILE):
     if data_file[-3:] == "npz":
@@ -71,6 +66,84 @@ def data_load_and_prep(data_file = DATA_FILE):
     dataset = TensorDataset(data_tensor, sol_tensor)
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
     return dataloader
+
+# UNET -------------------------------------------------------------------------------------------------------------------------------------
+
+def init_UNET_model(in_chanels: int = 1,
+                out_chanels: int = 1,
+                device = DEVICE,
+                img_dim = IMG_DIM,
+                lr = LR):
+    unet = models.UNET(in_chanels, out_chanels).to(device)
+    unet_optimizer = torch.optim.Adam(unet.parameters(), lr=lr)
+
+    return unet, unet_optimizer
+
+def training_step_UNET(images, ground_truths, unet, unet_optimizer):
+    # training step (forward and backwards pass of both generator and discriminator as well as parameter optimazation through gradient computation) for
+    # one batch of image pairs in the dataloader
+    images = images.to(DEVICE)  # move input to GPU
+    ground_truths = ground_truths.to(DEVICE)  # move target to GPU
+
+    # generator Forward
+    preds = unet(images)
+
+    # losses
+    loss = models.L1L2Loss(preds, ground_truths, 1, 0.5)
+
+    # backwards
+    unet_optimizer.zero_grad()
+    loss.backward()
+    unet_optimizer.step()
+
+    return loss, unet_optimizer
+
+def training_loop_UNET(unet, unet_optimizer, dataloader, num_epochs = NUM_EPOCHS):
+    for epoch in range(num_epochs):
+        for x, y in dataloader:
+            current_loss, current_optimizer = training_step_UNET(x, y, unet, unet_optimizer)
+            
+        print("Epoch: " + str(epoch))
+        print("Loss: " + str(current_loss))
+
+    return unet, num_epochs, current_loss, current_optimizer
+
+def training_and_saving_UNET_model(unet, unet_optimizer, dataloader, num_epochs = NUM_EPOCHS, path = trained_model_name, prev_epochs = 0):
+    print("############################")
+    print("Training model:")
+    print("############################")
+    unet, num_epochs, current_loss, current_optimizer = training_loop_UNET(unet, unet_optimizer, dataloader, num_epochs)
+    checkpoint = {
+    "epoch": num_epochs,
+    "generator_state_dict": unet.state_dict(),
+    "optimizer_state_dict": current_optimizer.state_dict(),
+    "loss": current_loss
+}
+    print("Saving model at: ", path)
+    torch.save(checkpoint, f"{path}_epoch_{num_epochs+prev_epochs}.pth")
+    print("Saved")
+    return None
+
+
+
+# GAN --------------------------------------------------------------------------------------------------------------------------------------
+
+def init_GAN_models(in_chanels_gen: int = 1,
+                out_chanels_gen: int = 1,
+                in_chanels_disc: int = 1,
+                out_chanels_disc: int = 1,
+                device = DEVICE,
+                img_dim = IMG_DIM,
+                lr_gen = LR,
+                lr_disc = LR):
+    generator = models.UNET(in_chanels_gen, out_chanels_gen).to(device)
+    generator_optimizer = torch.optim.Adam(generator.parameters(), lr=lr_gen)
+
+    #discriminator = models.Discriminator(img_dim)
+    discriminator = models.Discriminator(img_dim, in_chanels_disc, out_chanels_disc).to(device)
+    discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=lr_disc)
+
+    return generator, generator_optimizer, discriminator, discriminator_optimizer
 
 def training_step_GAN(images, ground_truths, generator, gen_optimizer, discriminator, disc_optimizer):
     # training step (forward and backwards pass of both generator and discriminator as well as parameter optimazation through gradient computation) for
@@ -102,9 +175,9 @@ def training_loop_GAN(generator, gen_optimizer, discriminator, disc_optimizer, d
     for epoch in range(num_epochs):
         for x, y in dataloader:
             current_gen_loss, current_disc_loss, current_gen_optimizer, current_disc_optimizer = training_step_GAN(x, y, generator, gen_optimizer, discriminator, disc_optimizer)
-            print("Epoch: " + str(epoch))
-            print("Loss Generator: " + str(current_gen_loss))
-            print("Loss Discriminator: " + str(current_disc_loss))
+        print("Epoch: " + str(epoch))
+        print("Loss Generator: " + str(current_gen_loss))
+        print("Loss Discriminator: " + str(current_disc_loss))
 
     return generator, discriminator, num_epochs, current_gen_loss, current_disc_loss, current_gen_optimizer, current_disc_optimizer
 
@@ -127,12 +200,21 @@ def training_and_saving_GAN_model(generator, gen_optimizer, discriminator, disc_
     print("Saved")
     return None
 
+# ------------------------------------------------------------------------------------------------------------------------------------------
+
 def main():
     dataloader = data_load_and_prep()
-    generator, generator_optimizer, discriminator, discriminator_optimizer = init_GAN_models()
-    generator.train()
-    discriminator.train()
-    training_and_saving_GAN_model(generator, generator_optimizer, discriminator, discriminator_optimizer, dataloader, path=trained_model_name)
+    if model == "UNET":
+        unet, unet_optimizer = init_UNET_model()
+        unet.train()
+        training_and_saving_UNET_model(unet, unet_optimizer, dataloader)
+    elif model == "GAN":
+        generator, generator_optimizer, discriminator, discriminator_optimizer = init_GAN_models()
+        generator.train()
+        discriminator.train()
+        training_and_saving_GAN_model(generator, generator_optimizer, discriminator, discriminator_optimizer, dataloader, path=trained_model_name)
+    else:
+        raise ModelArchitectureError(model)
     print("Done!")
     return None
 

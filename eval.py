@@ -14,21 +14,32 @@ import cmbNN_codes.training as training
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+modelArchitecture = None
+
 
 
 def load_model(path: str = "../models/model_epoch_3.pth", device = DEVICE):
-    model, _, _, _ = training.init_models()
+    if "unet" in path or "UNET" in path or modelArchitecture == "UNET":
+        model, _ = training.init_UNET_model()
+        print("Loading Model of UNET-architecture")
+    elif "gan" in path or "GAN" in path or modelArchitecture == "GAN":
+        model, _, _, _ = training.init_GAN_models()
+        print("Loading Model of GAN-architecture")
+    else:
+        print("Model path does not specify model architecture")
+        raise training.ModelArchitectureError()
     model.to(device)
     last_model_state = torch.load(path, map_location=device)
     model.load_state_dict(last_model_state["generator_state_dict"])
 
     print(f"Loaded model from epoch {last_model_state['epoch']} onto {DEVICE}")
-    print(f"  loss_G at save time: {last_model_state['loss_G']}")
-    print(f"  loss_D at save time: {last_model_state['loss_D']}")
+    if "gan" in path or "GAN" in path or modelArchitecture == "GAN":
+        print(f"  loss_G at save time: {last_model_state['loss_G']}")
+        print(f"  loss_D at save time: {last_model_state['loss_D']}")
 
     return model
 
-def load_random_sample(path: str, seed = 42):
+def load_random_sample(path: str, seed = 42):       #TODO: load random sample from part of the dataloader that was saved for evaluation
     np.random.seed(seed)
     with h5py.File(path, "r") as f:
         dataset = f["noisy"]
@@ -84,11 +95,11 @@ def make_figures(maps, save_path, title):
 
 
 def main():
-    model = load_model(path="../models/0307_real_noise_10k_model_3_32_1e-4_epoch_3.pth")
+    model = load_model(path="../models/0507_unetTest_noWN_A7_epoch_1.pth")
     model.eval()
-    noisy, clean = load_random_sample("/home/user/Physik_Bonn/master_thesis/codes/cmbNN/data/NEW-Dset_1F-unsmooth_10k128pix_lin04.h5")
+    noisy, clean = load_random_sample("../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
     noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
-    make_figures([noisy, prediction, clean], "../outputs/0307test_fig.png", "0307_test_images")
+    make_figures([noisy, prediction, clean], "../outputs/0507test_noWN_A7_unet_fig_unet.png", "0507_test_images_unet")
     return None
 
 if __name__ == "__main__":

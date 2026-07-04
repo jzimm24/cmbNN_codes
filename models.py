@@ -82,6 +82,13 @@ class UNET(nn.Module):
             x = self.ups[idx+1](concat_skip)
 
         return self.final_conv(x)
+
+# Loss
+def L1L2Loss(pred, target, l1_weight = 1, l2_weight = 1):
+    l1 = nn.L1Loss()
+    l2 = nn.MSELoss()
+    return l1_weight * l1(pred, target) + l2_weight * l2(pred, target)
+
     
 # GAN --------------------------------------------------------------------------------------------------------------------------------------
 

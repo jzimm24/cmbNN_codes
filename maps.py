@@ -239,7 +239,7 @@ save_mode = 'hdf5'   # choose 'hdf5' or 'csv'
 flux_mode = 'lin'    # 'lin', 'log', or 'gauss' fluxes
 
 # === User‐defined parameters ===
-num_images               = 10000       # how many images to generate
+num_images               = 5000       # how many images to generate
 image_size               = 128         # pixels (height=width)
 
 max_source_number = 3           # max number of sources an image can have. Every image has 0-max_source_number of sources distributed linearly
@@ -264,14 +264,14 @@ I0_mean                  = 1.0           # mean of Gaussian flux prior   (used w
 I0_sigma                 = 0.3           # std-dev of Gaussian flux prior (used when flux_mode='gauss')
 
 
-white_noise_amplitude    = 2.0        # σ for white Gaussian noise (~2 when with 1/f, ~7 when WN only)
-one_over_f_slope         = 3.0        # power‐law slope (1.5=pink, 3.0=red)
-one_over_f_amplitude     = 1.0        # scaling for 1/f noise (~1 when slope 3.0, ~2 when slope 1.5)
+white_noise_amplitude    = 0.0        # σ for white Gaussian noise (~2 when with 1/f, ~7 when WN only)
+one_over_f_slope         = 1.5        # power‐law slope (1.5=pink, 3.0=red)
+one_over_f_amplitude     = 7.0        # scaling for 1/f noise (~1 when slope 3.0, ~2 when slope 1.5)
 
 gaussian_smoothing_fwhm  = 0.0        # if >0, smooth final image with this FWHM   --> DEFAULT 5 PIXELS
 
 
-output_h5               = '../data/NEW-Dset_1F-unsmooth_10k128pix_lin04.h5'
+output_h5               = '../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5'
 
 def generate_beta_model_image(size, 
                               rc_mean, 
