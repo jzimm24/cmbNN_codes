@@ -16,7 +16,20 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 modelArchitecture = None
 
+EVAL_SPLIT = 0.05
+BATCH_SIZE = 16
 
+MAX_VAL = 1 # for psnr
+
+# ---------------------------------------------------------------------------------------------------------------------------------
+
+class ModelAccessibilityError(ValueError):
+    pass
+
+class DataAccessibilityError(ValueError):
+    pass
+
+# ---------------------------------------------------------------------------------------------------------------------------------
 
 def load_model(path: str = "../models/model_epoch_3.pth", device = DEVICE):
     if "unet" in path or "UNET" in path or modelArchitecture == "UNET":
@@ -92,7 +105,97 @@ def make_figures(maps, save_path, title):
     plt.close(fig)
     return None
 
+def load_eval_data(data_file):
+    if 1-EVAL_SPLIT != training.TRAIN_SPLIT:
+        print("TRAIN_SPLIT not consistently defined. Continuing with eval.TRAIN_SPLIT.")
+    print("EVAL_SPLIT: ", EVAL_SPLIT)
+    if data_file[-3:] == "npz":
+        data, sol, paras = functions.load_npz(data_file)
+        print("Data loading from .npz file")
+    elif data_file[-2:] == "h5":
+        data, sol = functions.load_h5py(data_file)
+        print("Data loading from .h5 file")
+    else:
+        raise training.DataFileFormatError(data_file)
+    
+    n_total = data.shape[0]
+    n_eval = int(EVAL_SPLIT*n_total)
 
+    data_eval = data[(n_total-n_eval):]
+    sol_eval = sol[(n_total - n_eval):]
+
+    data_tensor = torch.from_numpy(data_eval).float().unsqueeze(1)
+    sol_tensor = torch.from_numpy(sol_eval).float().unsqueeze(1)
+    dataset = TensorDataset(data_tensor, sol_tensor)
+    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False)
+    return dataloader
+
+def eval_MSE(model = None, data = None, model_path = None, data_file = None, batch_size = 16, device = DEVICE):
+    if model is None:
+        if model_path is None:
+            raise ModelAccessibilityError()
+        else:
+            model = load_model(model_path, device)
+    if data is None:
+        if data_file is None:
+            raise DataAccessibilityError()
+        else:
+            dataloader = load_eval_data(data_file)
+    mse_loss = nn.MSELoss(reduction="sum")
+    total_squared_error = 0
+    total_elements = 0
+    single_image_mse = []
+    with torch.no_grad():
+        for x, y in dataloader:
+            noisy_batch = x.to(device, non_blocking=True)
+            clean_batch = y.to(device, non_blocking=True)
+            preds = model(noisy_batch)
+
+            batch_squared_error = mse_loss(preds, clean_batch).item()
+            total_squared_error += batch_squared_error
+            total_elements += clean_batch.numel()
+
+            diff_squared = (preds - clean_batch) ** 2
+            per_image = diff_squared.view(diff_squared.size(0), -1).mean(dim=1)
+            single_image_mse.extend(per_image.cpu().numpy().tolist())
+
+    overall_mse = total_squared_error / total_elements
+    per_image_mse = np.array(per_image_mse)
+
+    return overall_mse, per_image_mse
+
+def eval_PSNR(model=None, data = None, model_path = None, data_file = None, max_val = MAX_VAL, batch_size = BATCH_SIZE, device = DEVICE):
+    if model is None:
+        if model_path is None:
+            raise ModelAccessibilityError()
+        else:
+            model = load_model(model_path, device)
+    if data is None:
+        if data_file is None:
+            raise DataAccessibilityError()
+        else:
+            dataloader = load_eval_data(data_file)
+    single_image_mse = []
+    with torch.no_grad():
+        for x, y in dataloader:
+            noisy_batch = x.to(device, non_blocking=True)
+            clean_batch = y.to(device, non_blocking=True)
+
+            preds = model(noisy_batch)
+
+            diff_squared = (preds - clean_batch)**2
+            diff_squared_per_image = diff_squared.view(diff_squared.size(0), -1).mean(dim=1)
+            single_image_mse.extend(diff_squared_per_image.cpu().numpy().tolist())
+    single_image_mse = np.array(single_image_mse)
+    with np.errstate(divide="ignore"):      # make sure division does not break code
+        single_image_psnr = 10 * np.log10((max_val ** 2) / single_image_mse)
+    single_image_psnr = np.where(np.isinf(single_image_psnr), np.nan, single_image_psnr)     #handle infinity instances seperatly
+
+    n_perfect = np.isnan(single_image_psnr).sum()
+    if n_perfect > 0:
+        print(f"Warning: {n_perfect} image(s) had MSE == 0 (infinite PSNR), excluded from statistics.")
+
+    return single_image_psnr
 
 def main():
     model = load_model(path="../models/0507_unetTest_noWN_A7_epoch_1.pth")
