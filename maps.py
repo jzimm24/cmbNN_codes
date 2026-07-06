@@ -276,7 +276,7 @@ output_h5               = '../data/1WN_1A_3S-smooth1_10k128pix_lin04.h5'
 def generate_beta_model_image(size, 
                               rc_mean, 
                               rc_sigma,
-                              x_shift = 0
+                              x_shift = 0,
                               y_shift = 0, 
                               I0_range=(0.5,1.0), 
                               I0_fixed=None):
