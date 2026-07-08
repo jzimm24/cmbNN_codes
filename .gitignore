@@ -30,6 +30,9 @@ slurm-*.err
 *.out
 *.err
 
+# SLURM scripts
+*.sh
+
 # Logs / experiment tracking
 logs/
 runs/
