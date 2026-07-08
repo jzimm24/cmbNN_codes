@@ -25,15 +25,15 @@ class ModelArchitectureError(ValueError):
 model = "UNET"
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-NUM_EPOCHS = 1
+NUM_EPOCHS = 16
 BATCH_SIZE = 16
 LR = 1e-4
 IMG_DIM = 128
-DATA_FILE = "../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5"
+DATA_FILE = "../data/1WN_1A_3S-smooth1_10k128pix_lin04.h5"
 TRAIN_SPLIT = 1-0.05
 
 # no .pth
-trained_model_name = "../models/0507_unetTest_noWN_A7"
+trained_model_name = "../models/fullRunUnet_1"
 
 # General ---------------------------------------------------------------------------------------------------------------------------------
 
