@@ -19,3 +19,11 @@ def load_h5py(path: str):
         X = f["clean"][:]
         Y = f["noisy"][:]
     return X, Y
+
+def radial_bin_indices(nx, ny):
+    x, y = np.indices((nx, ny))
+    center = (nx//2, ny//2)
+    r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
+    r = r.astype(int)
+    max_r = min(nx, ny) // 2
+    return r, max_r

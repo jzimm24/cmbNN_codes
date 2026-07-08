@@ -238,8 +238,7 @@ def eval_ssim(model=None, data = None, model_path = None, data_file = None, data
     return single_image_ssim
 
 def radial_power_spectrum(image):
-    nx = image.shape[0]
-    ny = image.shape[1]
+    nx, ny = image.shape
 
     fft = np.fft.fft2(image)
     fft_shifted = np.fft.fftshift(fft)
@@ -306,6 +305,41 @@ def eval_power_spectrum(model = None, data = None, model_path = None, data_file 
     power_preds.append(current_power_pred)
 
     return k_bins, residuals, power_preds, power_groundtruths
+
+def cross_correlation_coefficient(groundtruth_img, pred_img):
+    nx, ny = groundtruth_img.shape
+
+    groundtruth_fft = np.fft.fftshift(np.fft.fft2(groundtruth_img))
+    pred_fft = np.fft.fftshift(np.fft.fft2(pred_img))
+
+    groundtruth_power2d = np.abs(groundtruth_fft)**2
+    pred_power2d = np.abs(pred_fft)**2
+
+    cross_power2d = np.real(groundtruth_fft * np.conj(pred_fft))
+
+    r, r_max = functions.radial_bin_indices(ny, nx)
+    k_bins = np.arange(0, r_max)
+
+    groundtruth_power_k = np.zeros(r_max)
+    pred_power_k = np.zeros(r_max)
+    cross_power_k = np.zeros(r_max)
+
+    for k in k_bins:
+        mask = (r == k)
+        if mask.sum():
+            groundtruth_power_k[k] = groundtruth_power2d[mask].mean()
+            pred_power_k[k] = pred_power2d[mask].mean()
+            cross_power_k[k] = cross_power2d[mask].mean()
+        else:
+            groundtruth_power_k[k] = np.nan
+            pred_power_k[k] = np.nan
+            cross_power_k[k] = np.nan
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        r_k = cross_power_k / np.sqrt(groundtruth_power_k * pred_power_k)
+        r_k = np.where(np.isfinite(r_k), r_k, np.nan)
+
+    return k_bins, r_k
 
 def main():
     model = load_model(path="../models/0507_unetTest_noWN_A7_epoch_1.pth")
