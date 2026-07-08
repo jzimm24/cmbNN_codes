@@ -17,6 +17,8 @@ import cmbNN_codes.training as training
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 modelArchitecture = None
+MODEL_FILE = None
+DATA_FILE = None
 
 EVAL_SPLIT = 0.05
 BATCH_SIZE = 16
@@ -135,12 +137,13 @@ def load_eval_data(data_file):
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False)
     return dataloader
 
-def eval_MSE(model = None, data = None, model_path = None, data_file = None, batch_size = 16, device = DEVICE):
+def eval_MSE(model = None, data = None, model_file = MODEL_FILE, data_file = DATA_FILE, batch_size = 16, device = DEVICE):
     if model is None:
-        if model_path is None:
+        if model_file is None:
             raise ModelAccessibilityError()
         else:
-            model = load_model(model_path, device)
+            model = load_model(model_file, device)
+    model.eval()
     if data is None:
         if data_file is None:
             raise DataAccessibilityError()
@@ -167,16 +170,17 @@ def eval_MSE(model = None, data = None, model_path = None, data_file = None, bat
             single_image_mse.extend(per_image.cpu().numpy().tolist())
 
     overall_mse = total_squared_error / total_elements
-    per_image_mse = np.array(per_image_mse)
+    single_image_mse = np.array(single_image_mse)
 
-    return overall_mse, per_image_mse
+    return overall_mse, single_image_mse
 
-def eval_PSNR(model=None, data = None, model_path = None, data_file = None, max_val = MAX_VAL, batch_size = BATCH_SIZE, device = DEVICE):
+def eval_PSNR(model=None, data = None, model_file = MODEL_FILE, data_file = DATA_FILE, max_val = MAX_VAL, batch_size = BATCH_SIZE, device = DEVICE):
     if model is None:
-        if model_path is None:
+        if model_file is None:
             raise ModelAccessibilityError()
         else:
-            model = load_model(model_path, device)
+            model = load_model(model_file, device)
+    model.eval()
     if data is None:
         if data_file is None:
             raise DataAccessibilityError()
@@ -206,12 +210,13 @@ def eval_PSNR(model=None, data = None, model_path = None, data_file = None, max_
 
     return single_image_psnr
 
-def eval_ssim(model=None, data = None, model_path = None, data_file = None, data_range = DATA_RANGE, batch_size = BATCH_SIZE, device = DEVICE):
+def eval_ssim(model=None, data = None, model_file = MODEL_FILE, data_file = DATA_FILE, data_range = DATA_RANGE, batch_size = BATCH_SIZE, device = DEVICE):
     if model is None:
-        if model_path is None:
+        if model_file is None:
             raise ModelAccessibilityError()
         else:
-            model = load_model(model_path, device)
+            model = load_model(model_file, device)
+    model.eval()
     if data is None:
         if data_file is None:
             raise DataAccessibilityError()
@@ -226,11 +231,11 @@ def eval_ssim(model=None, data = None, model_path = None, data_file = None, data
 
             preds = model(noisy_batch)
 
-            if device == "DEVICE":
+            if device == DEVICE:
                 preds_cpu = preds.cpu().numpy()
-            for i in range(preds_cpu[0]):
+            for i in range(preds_cpu.shape[0]):
                 preds_img = preds_cpu[i, 0]
-                x_img = x[i, 0]
+                x_img = x[i, 0].numpy()
 
                 single_image_ssim.append(ssim(x_img, preds_img, data_range=max(data_range)))
     
@@ -342,11 +347,23 @@ def cross_correlation_coefficient(groundtruth_img, pred_img):
     return k_bins, r_k
 
 def main():
-    model = load_model(path="../models/0507_unetTest_noWN_A7_epoch_1.pth")
-    model.eval()
-    noisy, clean = load_random_sample("../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
-    noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
-    make_figures([noisy, prediction, clean], "../outputs/0507test_noWN_A7_unet_fig_unet.png", "0507_test_images_unet")
+    # model = load_model(path="../models/0507_unetTest_noWN_A7_epoch_1.pth")
+    # model.eval()
+    # noisy, clean = load_random_sample("../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
+    # noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
+    # make_figures([noisy, prediction, clean], "../outputs/0507test_noWN_A7_unet_fig_unet.png", "0507_test_images_unet")
+    #
+    #  total_mse, mse_list = eval_MSE(model_file="../models/0507_unetTest_noWN_A7_epoch_1.pth", data_file="../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
+    # print("Total MSE: ", total_mse)
+    # print("Max MSE: ", max(mse_list))
+    # print("#########################################################")
+    # psnr_list = eval_PSNR(model_file="../models/0507_unetTest_noWN_A7_epoch_1.pth", data_file="../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
+    # print("PSNR Max: ", max(psnr_list))
+    # print("PSNR Min: ", min(psnr_list))
+    ssim_list = eval_ssim(model_file="../models/0507_unetTest_noWN_A7_epoch_1.pth", data_file="../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
+    print("SSIM Max: ", max(ssim_list))
+    print("SSIM Min: ", min(ssim_list))
+    print("SSIM Avg: ", np.mean(ssim_list))
     return None
 
 if __name__ == "__main__":

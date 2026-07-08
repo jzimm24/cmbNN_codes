@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
-import cmdNN_codes.functions as functions
+import cmbNN_codes.functions as functions
 
 # #Hyperparameters
 # LR = 1e-4
