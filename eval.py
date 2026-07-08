@@ -6,6 +6,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 import h5py
+import skimage
+from skimage.metrics import structural_similarity as ssim
 
 import cmbNN_codes.functions as functions
 import cmbNN_codes.models as models
@@ -19,7 +21,10 @@ modelArchitecture = None
 EVAL_SPLIT = 0.05
 BATCH_SIZE = 16
 
+
+IMG_SIZE = 128
 MAX_VAL = 1 # for psnr
+DATA_RANGE = [0, MAX_VAL]
 
 # ---------------------------------------------------------------------------------------------------------------------------------
 
@@ -141,6 +146,8 @@ def eval_MSE(model = None, data = None, model_path = None, data_file = None, bat
             raise DataAccessibilityError()
         else:
             dataloader = load_eval_data(data_file)
+    else:
+        dataloader = data
     mse_loss = nn.MSELoss(reduction="sum")
     total_squared_error = 0
     total_elements = 0
@@ -175,6 +182,8 @@ def eval_PSNR(model=None, data = None, model_path = None, data_file = None, max_
             raise DataAccessibilityError()
         else:
             dataloader = load_eval_data(data_file)
+    else:
+        dataloader = data
     single_image_mse = []
     with torch.no_grad():
         for x, y in dataloader:
@@ -196,6 +205,107 @@ def eval_PSNR(model=None, data = None, model_path = None, data_file = None, max_
         print(f"Warning: {n_perfect} image(s) had MSE == 0 (infinite PSNR), excluded from statistics.")
 
     return single_image_psnr
+
+def eval_ssim(model=None, data = None, model_path = None, data_file = None, data_range = DATA_RANGE, batch_size = BATCH_SIZE, device = DEVICE):
+    if model is None:
+        if model_path is None:
+            raise ModelAccessibilityError()
+        else:
+            model = load_model(model_path, device)
+    if data is None:
+        if data_file is None:
+            raise DataAccessibilityError()
+        else:
+            dataloader = load_eval_data(data_file)
+    else:
+        dataloader = data
+    single_image_ssim = []
+    with torch.no_grad():
+        for x, y in dataloader:
+            noisy_batch = x.to(device, non_blocking=True)
+
+            preds = model(noisy_batch)
+
+            if device == "DEVICE":
+                preds_cpu = preds.cpu().numpy()
+            for i in range(preds_cpu[0]):
+                preds_img = preds_cpu[i, 0]
+                x_img = x[i, 0]
+
+                single_image_ssim.append(ssim(x_img, preds_img, data_range=max(data_range)))
+    
+    single_image_ssim = np.array(single_image_ssim)
+    return single_image_ssim
+
+def radial_power_spectrum(image):
+    nx = image.shape[0]
+    ny = image.shape[1]
+
+    fft = np.fft.fft2(image)
+    fft_shifted = np.fft.fftshift(fft)
+    power2d = np.abs(fft_shifted)**2
+
+    x, y = np.indices((nx, ny))
+    center = (nx//2, ny//2)
+    r = np.sqrt((x - center[0])**2 + (y-center[1])**2)
+    r = r.astype(int)
+
+    max_r = min(nx, ny)//2
+    k_bins = np.arange(0, max_r)
+    power = np.zeros(max_r)
+    for k in k_bins:
+        mask = (r == k)
+        if mask.sum() > 0:
+            power[k] = power2d[mask].mean()
+        else:
+            power[k] = np.nan
+    return k_bins, power
+
+def eval_power_spectrum(model = None, data = None, model_path = None, data_file = None, batch_size = BATCH_SIZE, device = DEVICE, img_size=IMG_SIZE):
+
+    if model is None:
+        if model_path is None:
+            raise ModelAccessibilityError()
+        else:
+            model = load_model(model_path, device)
+    if data is None:
+        if data_file is None:
+            raise DataAccessibilityError()
+        else:
+            dataloader = load_eval_data(data_file)
+    else:
+        dataloader = data
+
+    max_r = img_size // 2
+    residuals = []
+    power_groundtruths = []
+    power_preds = []
+    with torch.no_grad():
+        for x, y in dataloader:
+            noisy_batch = noisy_batch.to(device, non_blocking=True)
+            preds = model(noisy_batch)
+            preds_np = preds.cpu().numpy()
+
+            for i in range(preds_np.shape[0]):
+                pred_img = preds_np[i, 0]
+                y_img = y.numpy()[i, 0]
+
+                k_bins, current_power_pred = radial_power_spectrum(pred_img)
+                _, current_power_groundtruth = radial_power_spectrum(y_img)
+
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    current_residual = (current_power_pred - current_power_groundtruth) / current_power_groundtruth
+                current_residual = np.where(np.isfinite(current_residual, current_residual, np.nan))
+
+                residuals.append(current_residual)
+                power_groundtruths.append(current_power_groundtruth)
+                power_preds.append(current_power_pred)
+
+    residuals.append(current_residual)
+    power_groundtruths.append(current_power_groundtruth)
+    power_preds.append(current_power_pred)
+
+    return k_bins, residuals, power_preds, power_groundtruths
 
 def main():
     model = load_model(path="../models/0507_unetTest_noWN_A7_epoch_1.pth")
