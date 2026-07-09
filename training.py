@@ -9,8 +9,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
-import functions as functions
-import models as models
+import cmbNN_codes.functions as functions
+import cmbNN_codes.models as models
 
 # ---------------------------------------------------------------------------------------------------------------------------------
 
