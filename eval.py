@@ -9,9 +9,9 @@ import h5py
 import skimage
 from skimage.metrics import structural_similarity as ssim
 
-import cmbNN_codes.functions as functions
-import cmbNN_codes.models as models
-import cmbNN_codes.training as training
+import functions as functions
+import models as models
+import training as training
 
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
