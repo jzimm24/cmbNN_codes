@@ -35,6 +35,9 @@ TRAIN_SPLIT = 1-0.05
 # no .pth
 trained_model_name = "../models/fullRunUnet_1"
 
+crit = nn.BCEWithLogitsLoss() 
+#crit = models.L1L2Loss()
+
 # General ---------------------------------------------------------------------------------------------------------------------------------
 
 def log_memory_usage():
@@ -89,7 +92,7 @@ def training_step_UNET(images, ground_truths, unet, unet_optimizer):
     preds = unet(images)
 
     # losses
-    loss = models.L1L2Loss(preds, ground_truths, 1, 0.5)
+    loss = crit(preds, ground_truths)
 
     # backwards
     unet_optimizer.zero_grad()
