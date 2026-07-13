@@ -16,9 +16,10 @@ import training as training
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-modelArchitecture = None
-MODEL_FILE = None
-DATA_FILE = None
+modelArchitecture = "UNET"
+MODEL_FILE = "../models/fullRunUnet_1_epoch_16.pth"
+DATA_FILE = "../data/1WN_1A_3S-smooth1_10k128pix_lin04.h5"
+OUTPUT_FILE = "test_sample_fullUNETrun.png"
 
 EVAL_SPLIT = 0.05
 BATCH_SIZE = 16
@@ -27,6 +28,8 @@ BATCH_SIZE = 16
 IMG_SIZE = 128
 MAX_VAL = 1 # for psnr
 DATA_RANGE = [0, MAX_VAL]
+
+TITLE = OUTPUT_FILE
 
 # ---------------------------------------------------------------------------------------------------------------------------------
 
@@ -38,7 +41,7 @@ class DataAccessibilityError(ValueError):
 
 # ---------------------------------------------------------------------------------------------------------------------------------
 
-def load_model(path: str = "../models/model_epoch_3.pth", device = DEVICE):
+def load_model(path: MODEL_FILE, device = DEVICE):
     if "unet" in path or "UNET" in path or modelArchitecture == "UNET":
         model, _ = training.init_UNET_model()
         print("Loading Model of UNET-architecture")
@@ -59,7 +62,7 @@ def load_model(path: str = "../models/model_epoch_3.pth", device = DEVICE):
 
     return model
 
-def load_random_sample(path: str, seed = 42):       #TODO: load random sample from part of the dataloader that was saved for evaluation
+def load_random_sample(path: str = DATA_FILE, seed = 42):       #TODO: load random sample from part of the dataloader that was saved for evaluation
     np.random.seed(seed)
     with h5py.File(path, "r") as f:
         dataset = f["noisy"]
@@ -76,7 +79,7 @@ def load_random_sample(path: str, seed = 42):       #TODO: load random sample fr
     tensor_clean = torch.from_numpy(sample_clean).float().unsqueeze(0).unsqueeze(0)
     return tensor_noisy, tensor_clean
 
-def example_forward_pass(model, sample = None, path = "/home/user/Physik_Bonn/master_thesis/codes/cmbNN/data/NEW-Dset_1F-unsmooth_1k128pix_lin04.h5"):
+def example_forward_pass(model, sample = None, path = DATA_FILE):
     if sample is None:
         sample = load_random_sample(path)
     sample_on_device = sample[0].to(DEVICE)
@@ -84,7 +87,7 @@ def example_forward_pass(model, sample = None, path = "/home/user/Physik_Bonn/ma
     ground_truth = sample[1].to(DEVICE)
     return sample_on_device, output, ground_truth
 
-def make_figures(maps, save_path, title):
+def make_figures(maps, save_path: str = "../outputs/" + OUTPUT_FILE, title: str = TITLE):
     n = len(maps)
     fig, axes = plt.subplots(1, n, figsize=(5 * n, 5))
     if n == 1:
@@ -347,24 +350,27 @@ def cross_correlation_coefficient(groundtruth_img, pred_img):
     return k_bins, r_k
 
 def main():
-    # model = load_model(path="../models/0507_unetTest_noWN_A7_epoch_1.pth")
-    # model.eval()
-    # noisy, clean = load_random_sample("../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
-    # noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
-    # make_figures([noisy, prediction, clean], "../outputs/0507test_noWN_A7_unet_fig_unet.png", "0507_test_images_unet")
+    model = load_model()
+    model.eval()
+    noisy, clean = load_random_sample()
+    noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
+    make_figures([noisy, prediction, clean], "../outputs/0507test_noWN_A7_unet_fig_unet.png", "0507_test_images_unet")
     #
+    
     #  total_mse, mse_list = eval_MSE(model_file="../models/0507_unetTest_noWN_A7_epoch_1.pth", data_file="../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
     # print("Total MSE: ", total_mse)
     # print("Max MSE: ", max(mse_list))
     # print("#########################################################")
+    
     # psnr_list = eval_PSNR(model_file="../models/0507_unetTest_noWN_A7_epoch_1.pth", data_file="../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
     # print("PSNR Max: ", max(psnr_list))
     # print("PSNR Min: ", min(psnr_list))
-    ssim_list = eval_ssim(model_file="../models/0507_unetTest_noWN_A7_epoch_1.pth", data_file="../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
-    print("SSIM Max: ", max(ssim_list))
-    print("SSIM Min: ", min(ssim_list))
-    print("SSIM Avg: ", np.mean(ssim_list))
-    return None
+    
+    # ssim_list = eval_ssim(model_file="../models/0507_unetTest_noWN_A7_epoch_1.pth", data_file="../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
+    # print("SSIM Max: ", max(ssim_list))
+    # print("SSIM Min: ", min(ssim_list))
+    # print("SSIM Avg: ", np.mean(ssim_list))
+    # return None
 
 if __name__ == "__main__":
     print("Executing main() in eval.py")
