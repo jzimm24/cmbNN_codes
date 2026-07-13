@@ -35,8 +35,8 @@ TRAIN_SPLIT = 1-0.05
 # no .pth
 trained_model_name = "../models/fullRunUnet_1_BCELoss"
 
-crit = nn.BCEWithLogitsLoss() 
-#crit = models.L1L2Loss()
+#crit = nn.BCEWithLogitsLoss() 
+crit = models.L1L2Loss()
 
 # General ---------------------------------------------------------------------------------------------------------------------------------
 
