@@ -33,7 +33,7 @@ DATA_FILE = "../data/1WN_1A_3S-smooth1_10k128pix_lin04.h5"
 TRAIN_SPLIT = 1-0.05
 
 # no .pth
-trained_model_name = "../models/fullRunUnet_1"
+trained_model_name = "../models/fullRunUnet_1_BCELoss"
 
 crit = nn.BCEWithLogitsLoss() 
 #crit = models.L1L2Loss()

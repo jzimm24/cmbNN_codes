@@ -17,9 +17,9 @@ import training as training
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 modelArchitecture = "UNET"
-MODEL_FILE = "../models/fullRunUnet_1_epoch_16.pth"
+MODEL_FILE = "../models/fullRunUnet_1_BCELoss_epoch_16.pth"
 DATA_FILE = "../data/1WN_1A_3S-smooth1_10k128pix_lin04.h5"
-OUTPUT_FILE = "test_sample_fullUNETrun.png"
+OUTPUT_FILE = "test_sample_fullUNETrun_BCELoss.png"
 
 EVAL_SPLIT = 0.05
 BATCH_SIZE = 16
@@ -41,7 +41,7 @@ class DataAccessibilityError(ValueError):
 
 # ---------------------------------------------------------------------------------------------------------------------------------
 
-def load_model(path: MODEL_FILE, device = DEVICE):
+def load_model(path: str = MODEL_FILE, device: str = DEVICE):
     if "unet" in path or "UNET" in path or modelArchitecture == "UNET":
         model, _ = training.init_UNET_model()
         print("Loading Model of UNET-architecture")
@@ -354,7 +354,7 @@ def main():
     model.eval()
     noisy, clean = load_random_sample()
     noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
-    make_figures([noisy, prediction, clean], "../outputs/0507test_noWN_A7_unet_fig_unet.png", "0507_test_images_unet")
+    make_figures([noisy, prediction, clean])
     #
     
     #  total_mse, mse_list = eval_MSE(model_file="../models/0507_unetTest_noWN_A7_epoch_1.pth", data_file="../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
