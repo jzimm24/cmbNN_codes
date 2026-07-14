@@ -57,11 +57,13 @@ def data_load_and_prep(data_file = DATA_FILE):
         print("Data loading from .h5 file")
     else:
         raise DataFileFormatError(data_file[-5])
-    
-    ## TODO normalize the scale of the pixels
 
     n_total = data.shape[0]
     n_train = int(TRAIN_SPLIT*n_total)
+
+    print("###################")
+    print(data.shape)
+    print("###################")
 
     data_train = data[:n_train]
     sol_train = sol[:n_train]
@@ -209,12 +211,6 @@ def training_and_saving_GAN_model(generator, gen_optimizer, discriminator, disc_
 
 def main():
     dataloader = data_load_and_prep()
-    for x, y in dataloader:
-        data_xmin, data_xmax, data_xmean, data_xstd = x.min(), x.max(), x.mean(), x.std()
-        data_ymin, data_ymax, data_ymean, data_ystd = y.min(), y.max(), y.mean(), y.std()
-        with open("../outputs/dataInfo.txt", "w") as f:
-            f.write(f"{data_xmin}\t{data_xmax}\t{data_xmean}\t{data_xstd}\t"
-                f"{data_ymin}\t{data_ymax}\t{data_ymean}\t{data_ystd}\n")
     # if model == "UNET":
     #     unet, unet_optimizer = init_UNET_model()
     #     unet.train()
