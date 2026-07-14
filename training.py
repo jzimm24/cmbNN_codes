@@ -25,15 +25,15 @@ class ModelArchitectureError(ValueError):
 model = "UNET"
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-NUM_EPOCHS = 16
-BATCH_SIZE = 16
-LR = 1e-4
+NUM_EPOCHS = 3
+BATCH_SIZE = 32
+LR = 5e-4
 IMG_DIM = 128
 DATA_FILE = "../data/NEW-Dset_1F-unsmooth_10k128pix_lin04.h5"
 TRAIN_SPLIT = 1-0.05
 
 # no .pth
-trained_model_name = "../models/fullRunUnet_1_BCELoss"
+trained_model_name = "../models/shortUnetRun"
 
 #crit = nn.BCEWithLogitsLoss() 
 crit = models.L1L2Loss
@@ -46,6 +46,8 @@ def log_memory_usage():
     if DEVICE == "cuda":
         print(f"Allocated memory: {torch.cuda.memory_allocated()} bytes")
         print(f"Max allocated memory: {torch.cuda.max_memory_allocated()} bytes")
+    elif DEVICE == "cpu":
+        print(f"Memry used: CPU")
     return None
 
 def data_load_and_prep(data_file = DATA_FILE):
@@ -61,9 +63,10 @@ def data_load_and_prep(data_file = DATA_FILE):
     n_total = data.shape[0]
     n_train = int(TRAIN_SPLIT*n_total)
 
-    print("###################")
-    print(data.shape)
-    print("###################")
+    img_min = data.min(axis = (1, 2), keepdims = True)
+    img_max = data.max(axis = (1, 2), keepdims = True)
+    # TODO: Fix this division
+    data = (data - img_min) / (img_max -img_min)
 
     data_train = data[:n_train]
     sol_train = sol[:n_train]
