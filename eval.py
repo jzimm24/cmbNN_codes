@@ -17,9 +17,9 @@ import training as training
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 modelArchitecture = "UNET"
-MODEL_FILE = "../models/fullRunUnet_1_BCELoss_epoch_16.pth"
-DATA_FILE = "../data/1WN_1A_3S-smooth1_10k128pix_lin04.h5"
-OUTPUT_FILE = "test_sample_fullUNETrun_BCELoss.png"
+MODEL_FILE = "../models/shortUnetRun_epoch_3.pth"
+DATA_FILE = training.DATA_FILE
+OUTPUT_FILE = "test1508.png"
 
 EVAL_SPLIT = 0.05
 BATCH_SIZE = 16

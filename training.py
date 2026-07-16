@@ -50,7 +50,7 @@ def log_memory_usage():
         print(f"Memry used: CPU")
     return None
 
-def data_load_and_prep(data_file = DATA_FILE):
+def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
     if data_file[-3:] == "npz":
         data, sol, paras = functions.load_npz(data_file)
         print("Data loading from .npz file")
@@ -66,7 +66,8 @@ def data_load_and_prep(data_file = DATA_FILE):
     img_min = data.min(axis = (1, 2), keepdims = True)
     img_max = data.max(axis = (1, 2), keepdims = True)
     # TODO: Fix this division
-    data = (data - img_min) / (img_max -img_min)
+
+    data = (data - img_min) / (img_max - img_min + epsilon)
 
     data_train = data[:n_train]
     sol_train = sol[:n_train]
@@ -214,19 +215,19 @@ def training_and_saving_GAN_model(generator, gen_optimizer, discriminator, disc_
 
 def main():
     dataloader = data_load_and_prep()
-    # if model == "UNET":
-    #     unet, unet_optimizer = init_UNET_model()
-    #     unet.train()
-    #     training_and_saving_UNET_model(unet, unet_optimizer, dataloader)
-    # elif model == "GAN":
-    #     generator, generator_optimizer, discriminator, discriminator_optimizer = init_GAN_models()
-    #     generator.train()
-    #     discriminator.train()
-    #     training_and_saving_GAN_model(generator, generator_optimizer, discriminator, discriminator_optimizer, dataloader, path=trained_model_name)
-    # else:
-    #     raise ModelArchitectureError(model)
-    # print("Done!")
-    # return None
+    if model == "UNET":
+        unet, unet_optimizer = init_UNET_model()
+        unet.train()
+        training_and_saving_UNET_model(unet, unet_optimizer, dataloader)
+    elif model == "GAN":
+        generator, generator_optimizer, discriminator, discriminator_optimizer = init_GAN_models()
+        generator.train()
+        discriminator.train()
+        training_and_saving_GAN_model(generator, generator_optimizer, discriminator, discriminator_optimizer, dataloader, path=trained_model_name)
+    else:
+        raise ModelArchitectureError(model)
+    print("Done!")
+    return None
 
 if __name__ == "__main__":
     print("Executing main() in training.py")
