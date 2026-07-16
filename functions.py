@@ -16,8 +16,8 @@ def load_npz(path: str):
 
 def load_h5py(path: str):
     with h5py.File(path, "r") as f:
-        X = f["clean"][:]
-        Y = f["noisy"][:]
+        X = f["noisy"][:]
+        Y = f["clean"][:]
     return X, Y
 
 def radial_bin_indices(nx, ny):

@@ -27,13 +27,13 @@ model = "UNET"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 NUM_EPOCHS = 3
 BATCH_SIZE = 32
-LR = 5e-4
+LR = 1e-4
 IMG_DIM = 128
-DATA_FILE = "../data/NEW-Dset_1F-unsmooth_10k128pix_lin04.h5"
+DATA_FILE = "../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5"
 TRAIN_SPLIT = 1-0.05
 
 # no .pth
-trained_model_name = "../models/shortUnetRun"
+trained_model_name = "../models/1608Model"
 
 #crit = nn.BCEWithLogitsLoss() 
 crit = models.L1L2Loss
@@ -61,13 +61,17 @@ def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
         raise DataFileFormatError(data_file[-5])
 
     n_total = data.shape[0]
+    print("total images: ", n_total)
     n_train = int(TRAIN_SPLIT*n_total)
+    print("training images: ", n_train)
 
-    img_min = data.min(axis = (1, 2), keepdims = True)
-    img_max = data.max(axis = (1, 2), keepdims = True)
-    # TODO: Fix this division
+    data_img_min = data.min(axis = (1, 2), keepdims = True)
+    data_img_max = data.max(axis = (1, 2), keepdims = True)
+    data = (data - data_img_min) / (data_img_max - data_img_min + epsilon)
 
-    data = (data - img_min) / (img_max - img_min + epsilon)
+    sol_img_min = sol.min(axis = (1, 2), keepdims = True)
+    sol_img_max = sol.max(axis = (1, 2), keepdims = True)
+    sol = (sol - sol_img_min) / (sol_img_max - sol_img_min + epsilon)
 
     data_train = data[:n_train]
     sol_train = sol[:n_train]
@@ -111,11 +115,15 @@ def training_step_UNET(images, ground_truths, unet, unet_optimizer):
 
 def training_loop_UNET(unet, unet_optimizer, dataloader, num_epochs = NUM_EPOCHS):
     for epoch in range(num_epochs):
+        print("##############")
+        print("Epoch: ", epoch)
+        print("##############")
+        running_loss = 0
         for x, y in dataloader:
             current_loss, current_optimizer = training_step_UNET(x, y, unet, unet_optimizer)
-            
-        print("Epoch: " + str(epoch))
-        print("Loss: " + str(current_loss))
+            running_loss += current_loss.item()
+        print("Loss: ", running_loss/len(dataloader))
+
 
     return unet, num_epochs, current_loss, current_optimizer
 
@@ -215,6 +223,7 @@ def training_and_saving_GAN_model(generator, gen_optimizer, discriminator, disc_
 
 def main():
     dataloader = data_load_and_prep()
+
     if model == "UNET":
         unet, unet_optimizer = init_UNET_model()
         unet.train()
@@ -227,6 +236,7 @@ def main():
     else:
         raise ModelArchitectureError(model)
     print("Done!")
+
     return None
 
 if __name__ == "__main__":

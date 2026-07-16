@@ -17,9 +17,9 @@ import training as training
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 modelArchitecture = "UNET"
-MODEL_FILE = "../models/shortUnetRun_epoch_3.pth"
+MODEL_FILE = "../models/1608Model_epoch_3.pth"
 DATA_FILE = training.DATA_FILE
-OUTPUT_FILE = "test1508.png"
+OUTPUT_FILE = "1608_test2.png"
 
 EVAL_SPLIT = 0.05
 BATCH_SIZE = 16
