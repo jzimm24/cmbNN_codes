@@ -17,9 +17,9 @@ import training as training
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 modelArchitecture = "UNET"
-MODEL_FILE = "../models/1608Model_epoch_3.pth"
+MODEL_FILE = "../models/easyData2_epoch_3.pth"
 DATA_FILE = training.DATA_FILE
-OUTPUT_FILE = "1608_test2.png"
+OUTPUT_FILE = "2307_easyData2.png"
 
 EVAL_SPLIT = 0.05
 BATCH_SIZE = 16
@@ -37,6 +37,9 @@ class ModelAccessibilityError(ValueError):
     pass
 
 class DataAccessibilityError(ValueError):
+    pass
+
+class UnknownFileStructureError(ValueError):
     pass
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -64,18 +67,28 @@ def load_model(path: str = MODEL_FILE, device: str = DEVICE):
 
 def load_random_sample(path: str = DATA_FILE, seed = 42):       #TODO: load random sample from part of the dataloader that was saved for evaluation
     np.random.seed(seed)
-    with h5py.File(path, "r") as f:
-        dataset = f["noisy"]
-        num_maps = dataset.shape[0]
+    if path[-3:] == ".h5":
+        with h5py.File(path, "r") as f:
+            dataset = f["noisy"]
+            num_maps = dataset.shape[0]
+            idx = np.random.randint(0, num_maps)
+            sample_noisy = dataset[idx]
+
+            dataset_clean = f["clean"]
+            sample_clean = dataset_clean[idx]
+
+            print(f"Sample [{idx}] loaded.")
+    elif path[-3:] == "npz":
+        dataset_noisy, dataset_clean, _ = functions.load_npz(path=path)
+        num_maps = dataset_noisy.shape[0]
         idx = np.random.randint(0, num_maps)
-        sample = dataset[idx]
 
-        dataset_clean = f["clean"]
+        sample_noisy = dataset_noisy[idx]
         sample_clean = dataset_clean[idx]
+    else:
+        raise UnknownFileStructureError(path[-7:])
 
-        print(f"Sample [{idx}] loaded.")
-
-    tensor_noisy = torch.from_numpy(sample).float().unsqueeze(0).unsqueeze(0)
+    tensor_noisy = torch.from_numpy(sample_noisy).float().unsqueeze(0).unsqueeze(0)
     tensor_clean = torch.from_numpy(sample_clean).float().unsqueeze(0).unsqueeze(0)
     return tensor_noisy, tensor_clean
 
