@@ -3,6 +3,8 @@ import h5py
 import csv
 from datetime import datetime
 
+import config as config
+
 def make_circle_map(map_size: int = 32, radius: float = 10, cx: float = 16, cy: float = 16):
     """
     Create a simple image of shape (map_size, map_size) with a circle defined by radius and offsets (cx, cy).
@@ -235,14 +237,14 @@ def save_maps(maps, ground_truths, doc, file_name: str = "circle_maps"):
 
 # Original code taken from Dr. Kaustuv Basu. Expanded to include randomization of source position and source number.
 
-save_mode = 'hdf5'   # choose 'hdf5' or 'csv'
-flux_mode = 'lin'    # 'lin', 'log', or 'gauss' fluxes
+save_mode = config.maps_save_mode   # choose 'hdf5' or 'csv'
+flux_mode = config.maps_flux_mode    # 'lin', 'log', or 'gauss' fluxes
 
 # === User‐defined parameters ===
-num_images               = 10000       # how many images to generate
-image_size               = 128         # pixels (height=width)
+num_images               = config.maps_num_images      # how many images to generate
+image_size               = config.maps_image_size         # pixels (height=width)
 
-max_source_number = 3           # max number of sources an image can have. Every image has 0-max_source_number of sources distributed linearly
+max_source_number = config.maps_max_source_number            # max number of sources an image can have. Every image has 0-max_source_number of sources distributed linearly
 x_shift_mean = image_size/4     # positional offset (pixels) variables for randomly positioned (gaussian distr.) sources
 x_shift_var = image_size/4
 x_shift_max = image_size/2
@@ -250,28 +252,28 @@ y_shift_mean = image_size/4
 y_shift_var = image_size/4
 y_shift_max = image_size/2
 
-seed = 42                   #seed for random value selection
+seed = config.maps_seed                   #seed for random value selection
 
 
-rc_mean  = 7.0                       # r_c in the β‐model (pixels)   --> DEFAULT 7 PIXELS
-rc_sigma = 0.0                       # std dev in r_c (in pixels)   --> DEFAULT sigma=2 PIXELS
+rc_mean  = config.maps_rc_mean                       # r_c in the β‐model (pixels)   --> DEFAULT 7 PIXELS
+rc_sigma = config.maps_rc_sigma                       # std dev in r_c (in pixels)   --> DEFAULT sigma=2 PIXELS
 
 
-I0_range                 = (0.0, 4.0)    # if I0_fixed is None, draw uniformly/log-uniformly from this
+I0_range                 = config.maps_I0_range    # if I0_fixed is None, draw uniformly/log-uniformly from this
                                          # (used when flux_mode='lin' or 'log')
-I0_fixed                 = None          # set to a float to force same I0 each time
-I0_mean                  = 1.0           # mean of Gaussian flux prior   (used when flux_mode='gauss')
-I0_sigma                 = 0.3           # std-dev of Gaussian flux prior (used when flux_mode='gauss')
+I0_fixed                 = config.maps_I0_fixed          # set to a float to force same I0 each time
+I0_mean                  = config.maps_I0_mean           # mean of Gaussian flux prior   (used when flux_mode='gauss')
+I0_sigma                 = config.maps_I0_sigma           # std-dev of Gaussian flux prior (used when flux_mode='gauss')
 
 
-white_noise_amplitude    = 1.0        # σ for white Gaussian noise (~2 when with 1/f, ~7 when WN only)
-one_over_f_slope         = 3.0        # power‐law slope (1.5=pink, 3.0=red)
-one_over_f_amplitude     = 1.0        # scaling for 1/f noise (~1 when slope 3.0, ~2 when slope 1.5)
+white_noise_amplitude    = config.maps_white_noise_amplitude        # σ for white Gaussian noise (~2 when with 1/f, ~7 when WN only)
+one_over_f_slope         = config.maps_one_over_f_slope        # power‐law slope (1.5=pink, 3.0=red)
+one_over_f_amplitude     = config.maps_one_over_f_amplitude        # scaling for 1/f noise (~1 when slope 3.0, ~2 when slope 1.5)
 
-gaussian_smoothing_fwhm  = 1.0        # if >0, smooth final image with this FWHM   --> DEFAULT 5 PIXELS
+gaussian_smoothing_fwhm  = config.maps_gaussian_smoothing_fwhm        # if >0, smooth final image with this FWHM   --> DEFAULT 5 PIXELS
 
 
-output_h5               = '../data/1WN_1A_3S-smooth1_10k128pix_lin04.h5'
+output_h5               = config.maps_output_h5
 
 def generate_beta_model_image(size, 
                               rc_mean, 

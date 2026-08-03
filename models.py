@@ -9,18 +9,6 @@ from torch.utils.data import DataLoader, TensorDataset
 
 import functions as functions
 
-# #Hyperparameters
-# LR = 1e-4
-# DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-# BATCH_SIZE = 16
-# NUM_EPOCHS = 3
-# NUM_WORKERS = 1
-# IM_HEIGHT = 64
-# IM_WIDTH = 64
-
-# n = 1000                                                #number of images
-# filename = "../data/1k_64_multicircle_10xs20xy20"       #directory of data
-
 # UNET --------------------------------------------------------------------------------------------------------------------------------------
 
 #UNET

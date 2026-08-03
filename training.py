@@ -12,6 +12,8 @@ from torch.utils.data import DataLoader, TensorDataset
 import functions as functions
 import models as models
 
+import config as config
+
 # ---------------------------------------------------------------------------------------------------------------------------------
 
 class DataFileFormatError(ValueError):
@@ -22,21 +24,21 @@ class ModelArchitectureError(ValueError):
 
 # ---------------------------------------------------------------------------------------------------------------------------------
 
-model = "UNET"
+model = config.training_configs.model
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-NUM_EPOCHS = 3
-BATCH_SIZE = 16
-LR = 1e-4
-IMG_DIM = 128
-DATA_FILE = "/home/user/Physik_Bonn/master_thesis/codes/julius_master_thesis/data/errorDetection.npz"
-TRAIN_SPLIT = 1-0.05
+DEVICE = config.training_configs.DEVICE
+NUM_EPOCHS = config.training_configs.NUM_EPOCHS
+BATCH_SIZE = config.training_configs.BATCH_SIZE
+LR = config.training_configs.LR
+IMG_DIM = config.training_configs.IMG_DIM
+DATA_FILE = config.training_configs.DATA_FILE
+TRAIN_SPLIT = config.training_configs.TRAIN_SPLIT
 
 # no .pth
-trained_model_name = "../models/easyData2"
+trained_model_name = config.training_configs.trained_model_name
 
 #crit = nn.BCEWithLogitsLoss() 
-crit = models.L1L2Loss
+crit = config.training_configs.crit
 
 # General ---------------------------------------------------------------------------------------------------------------------------------
 
