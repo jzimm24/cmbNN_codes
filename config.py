@@ -2,9 +2,9 @@
 
 from typing import NamedTuple
 import torch
+import torch.nn as nn
 
 import models as models
-import training as training
 
 # ---------------------------------------------------------------------------------------------------------------------------------------
 
@@ -44,7 +44,7 @@ class maps_config(NamedTuple):
     save_mode = "hdf5"
     flux_mode = "lin"
 
-    num_images = 10000
+    num_images = 10
     image_size = 128
     max_source_number = 3
 
@@ -69,7 +69,7 @@ class maps_config(NamedTuple):
     gaussian_smoothing_fwhm  = 1.0        # if >0, smooth final image with this FWHM   --> DEFAULT 5 PIXELS
 
 
-    output_h5               = '../data/1WN_1A_3S-smooth1_10k128pix_lin04.h5'
+    output_h5               = '../data/test1008.h5'
 
 maps_configs = maps_config()
 
@@ -86,8 +86,8 @@ class training_config(NamedTuple):
     IMG_DIM = maps_image_size
     DATA_FILE = maps_output_h5
     TRAIN_SPLIT = 1-0.05
-    trained_model_name = "../models/easyData2"
-    crit = models.L1L2Loss
+    trained_model_name = "../models/test2"
+    crit = nn.BCEWithLogitsLoss() 
 
 training_configs = training_config()
 
@@ -100,7 +100,7 @@ class eval_config(NamedTuple):
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
     modelArchitecture = training_configs.model
-    MODEL_FILE = training_configs.trained_model_name
+    MODEL_FILE = "../models/test2_epoch_3.pth"
     DATA_FILE = training_configs.DATA_FILE
     OUTPUT_FILE = "2307_easyData2.png"
 

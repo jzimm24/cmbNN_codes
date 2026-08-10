@@ -8,28 +8,31 @@ from torch.utils.data import DataLoader, TensorDataset
 import h5py
 import skimage
 from skimage.metrics import structural_similarity as ssim
+import time
 
 import functions as functions
 import models as models
 import training as training
 
+import config as config
+
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-modelArchitecture = "UNET"
-MODEL_FILE = "../models/easyData2_epoch_3.pth"
-DATA_FILE = training.DATA_FILE
-OUTPUT_FILE = "2307_easyData2.png"
+modelArchitecture = config.evaluation_configs.modelArchitecture
+MODEL_FILE = config.evaluation_configs.MODEL_FILE
+DATA_FILE = config.evaluation_configs.DATA_FILE
+OUTPUT_FILE = config.evaluation_configs.OUTPUT_FILE
 
-EVAL_SPLIT = 0.05
-BATCH_SIZE = 16
+EVAL_SPLIT = config.evaluation_configs.EVAL_SPLIT
+BATCH_SIZE = config.evaluation_configs.BATCH_SIZE
 
 
-IMG_SIZE = 128
-MAX_VAL = 1 # for psnr
-DATA_RANGE = [0, MAX_VAL]
+IMG_SIZE = config.evaluation_configs.IMG_SIZE
+MAX_VAL = config.evaluation_configs.MAX_VAL                     # for psnr
+DATA_RANGE = config.evaluation_configs.DATA_RANGE
 
-TITLE = OUTPUT_FILE
+TITLE = config.evaluation_configs.TITLE
 
 # ---------------------------------------------------------------------------------------------------------------------------------
 
@@ -363,6 +366,9 @@ def cross_correlation_coefficient(groundtruth_img, pred_img):
     return k_bins, r_k
 
 def main():
+
+    start_time = time.perf_counter()
+
     model = load_model()
     model.eval()
     noisy, clean = load_random_sample()
@@ -384,6 +390,10 @@ def main():
     # print("SSIM Min: ", min(ssim_list))
     # print("SSIM Avg: ", np.mean(ssim_list))
     # return None
+
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
+    functions.write_doc("../outputs/docs/first_doc_test4.txt", "evaluation", runtime=elapsed_time, output_file=OUTPUT_FILE)
 
 if __name__ == "__main__":
     print("Executing main() in eval.py")

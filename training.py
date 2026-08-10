@@ -4,6 +4,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+import time
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -224,6 +226,9 @@ def training_and_saving_GAN_model(generator, gen_optimizer, discriminator, disc_
 # ------------------------------------------------------------------------------------------------------------------------------------------
 
 def main():
+
+    start_time = time.perf_counter()
+
     dataloader = data_load_and_prep()
 
     if model == "UNET":
@@ -238,6 +243,10 @@ def main():
     else:
         raise ModelArchitectureError(model)
     print("Done!")
+
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
+    functions.write_doc("../outputs/docs/first_doc_test2.txt", "training", runtime=elapsed_time, output_file=trained_model_name)
 
     return None
 

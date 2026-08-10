@@ -2,6 +2,9 @@ import numpy as np
 import h5py
 import csv
 from datetime import datetime
+import time
+
+import functions as functions
 
 import config as config
 
@@ -237,14 +240,14 @@ def save_maps(maps, ground_truths, doc, file_name: str = "circle_maps"):
 
 # Original code taken from Dr. Kaustuv Basu. Expanded to include randomization of source position and source number.
 
-save_mode = config.maps_save_mode   # choose 'hdf5' or 'csv'
-flux_mode = config.maps_flux_mode    # 'lin', 'log', or 'gauss' fluxes
+save_mode = config.maps_configs.save_mode   # choose 'hdf5' or 'csv'
+flux_mode = config.maps_configs.flux_mode    # 'lin', 'log', or 'gauss' fluxes
 
 # === User‐defined parameters ===
-num_images               = config.maps_num_images      # how many images to generate
-image_size               = config.maps_image_size         # pixels (height=width)
+num_images               = config.maps_configs.num_images      # how many images to generate
+image_size               = config.maps_configs.image_size         # pixels (height=width)
 
-max_source_number = config.maps_max_source_number            # max number of sources an image can have. Every image has 0-max_source_number of sources distributed linearly
+max_source_number = config.maps_configs.max_source_number            # max number of sources an image can have. Every image has 0-max_source_number of sources distributed linearly
 x_shift_mean = image_size/4     # positional offset (pixels) variables for randomly positioned (gaussian distr.) sources
 x_shift_var = image_size/4
 x_shift_max = image_size/2
@@ -252,28 +255,28 @@ y_shift_mean = image_size/4
 y_shift_var = image_size/4
 y_shift_max = image_size/2
 
-seed = config.maps_seed                   #seed for random value selection
+seed = config.maps_configs.seed                   #seed for random value selection
 
 
-rc_mean  = config.maps_rc_mean                       # r_c in the β‐model (pixels)   --> DEFAULT 7 PIXELS
-rc_sigma = config.maps_rc_sigma                       # std dev in r_c (in pixels)   --> DEFAULT sigma=2 PIXELS
+rc_mean  = config.maps_configs.rc_mean                       # r_c in the β‐model (pixels)   --> DEFAULT 7 PIXELS
+rc_sigma = config.maps_configs.rc_sigma                       # std dev in r_c (in pixels)   --> DEFAULT sigma=2 PIXELS
 
 
-I0_range                 = config.maps_I0_range    # if I0_fixed is None, draw uniformly/log-uniformly from this
+I0_range                 = config.maps_configs.I0_range    # if I0_fixed is None, draw uniformly/log-uniformly from this
                                          # (used when flux_mode='lin' or 'log')
-I0_fixed                 = config.maps_I0_fixed          # set to a float to force same I0 each time
-I0_mean                  = config.maps_I0_mean           # mean of Gaussian flux prior   (used when flux_mode='gauss')
-I0_sigma                 = config.maps_I0_sigma           # std-dev of Gaussian flux prior (used when flux_mode='gauss')
+I0_fixed                 = config.maps_configs.I0_fixed          # set to a float to force same I0 each time
+I0_mean                  = config.maps_configs.I0_mean           # mean of Gaussian flux prior   (used when flux_mode='gauss')
+I0_sigma                 = config.maps_configs.I0_sigma           # std-dev of Gaussian flux prior (used when flux_mode='gauss')
 
 
-white_noise_amplitude    = config.maps_white_noise_amplitude        # σ for white Gaussian noise (~2 when with 1/f, ~7 when WN only)
-one_over_f_slope         = config.maps_one_over_f_slope        # power‐law slope (1.5=pink, 3.0=red)
-one_over_f_amplitude     = config.maps_one_over_f_amplitude        # scaling for 1/f noise (~1 when slope 3.0, ~2 when slope 1.5)
+white_noise_amplitude    = config.maps_configs.white_noise_amplitude        # σ for white Gaussian noise (~2 when with 1/f, ~7 when WN only)
+one_over_f_slope         = config.maps_configs.one_over_f_slope        # power‐law slope (1.5=pink, 3.0=red)
+one_over_f_amplitude     = config.maps_configs.one_over_f_amplitude        # scaling for 1/f noise (~1 when slope 3.0, ~2 when slope 1.5)
 
-gaussian_smoothing_fwhm  = config.maps_gaussian_smoothing_fwhm        # if >0, smooth final image with this FWHM   --> DEFAULT 5 PIXELS
+gaussian_smoothing_fwhm  = config.maps_configs.gaussian_smoothing_fwhm        # if >0, smooth final image with this FWHM   --> DEFAULT 5 PIXELS
 
 
-output_h5               = config.maps_output_h5
+output_h5               = config.maps_configs.output_h5
 
 def generate_beta_model_image(size, 
                               rc_mean, 
@@ -851,6 +854,9 @@ def save_dataset_csv(outpath, noisy_images, clean_images, I0s):
     print(f"Wrote CSV dataset -> {outpath} (rows={n}, cols={2*H*W+1})")
 
 def main():
+
+    start_time = time.perf_counter()
+
     images_noisy = []
     images_clean = []
     doc   = []
@@ -990,6 +996,9 @@ def main():
     else:
         save_dataset_csv(output_csv, images_noisy, images_clean, doc)
 
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
+    functions.write_doc("../outputs/docs/first_doc_test.txt", "map_making", runtime=elapsed_time, output_file=output_h5)
 
     return None
 
