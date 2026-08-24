@@ -68,7 +68,7 @@ def load_model(path: str = MODEL_FILE, device: str = DEVICE):
 
     return model
 
-def load_random_sample(path: str = DATA_FILE, seed = 42):       #TODO: load random sample from part of the dataloader that was saved for evaluation
+def load_random_sample(path: str, seed = 42):       #TODO: load random sample from part of the dataloader that was saved for evaluation
     np.random.seed(seed)
     if path[-3:] == ".h5":
         with h5py.File(path, "r") as f:

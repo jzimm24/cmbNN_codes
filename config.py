@@ -42,17 +42,17 @@ maps_output_h5               = '../data/1WN_1A_3S-smooth1_10k128pix_lin04.h5'
 
 class maps_config(NamedTuple):
     save_mode = "hdf5"
-    flux_mode = "lin"
+    flux_mode = "gauss"
 
     num_images = 10
-    image_size = 128
-    max_source_number = 3
+    image_size = 164
+    max_source_number = 4
 
     seed = 42                   #seed for random value selection
 
 
-    rc_mean  = 7.0                       # r_c in the β‐model (pixels)   --> DEFAULT 7 PIXELS
-    rc_sigma = 0.0                       # std dev in r_c (in pixels)   --> DEFAULT sigma=2 PIXELS
+    rc_mean  = 3.0                       # r_c in the β‐model (pixels)   --> DEFAULT 7 PIXELS
+    rc_sigma = 2.0                       # std dev in r_c (in pixels)   --> DEFAULT sigma=2 PIXELS
 
 
     I0_range                 = (0.0, 4.0)    # if I0_fixed is None, draw uniformly/log-uniformly from this
@@ -69,7 +69,9 @@ class maps_config(NamedTuple):
     gaussian_smoothing_fwhm  = 1.0        # if >0, smooth final image with this FWHM   --> DEFAULT 5 PIXELS
 
 
-    output_h5               = '../data/test1008.h5'
+    output_h5               = '../data/test1108.h5'
+
+    doc_path = "../outputs/docs/map_doc.txt"
 
 maps_configs = maps_config()
 
@@ -88,6 +90,7 @@ class training_config(NamedTuple):
     TRAIN_SPLIT = 1-0.05
     trained_model_name = "../models/test2"
     crit = nn.BCEWithLogitsLoss() 
+    doc_path = "../outputs/docs/training_doc.txt"
 
 training_configs = training_config()
 
@@ -113,5 +116,7 @@ class eval_config(NamedTuple):
     DATA_RANGE = [0, MAX_VAL]
 
     TITLE = OUTPUT_FILE
+
+    doc_path = "../outputs/docs/eval_doc.txt"
 
 evaluation_configs = eval_config()

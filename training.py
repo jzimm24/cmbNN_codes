@@ -54,6 +54,38 @@ def log_memory_usage():
         print(f"Memry used: CPU")
     return None
 
+# def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
+#     if data_file[-3:] == "npz":
+#         data, sol, paras = functions.load_npz(data_file)
+#         print("Data loading from .npz file")
+#     elif data_file[-2:] == "h5":
+#         data, sol = functions.load_h5py(data_file)
+#         print("Data loading from .h5 file")
+#     else:
+#         raise DataFileFormatError(data_file[-5])
+
+#     n_total = data.shape[0]
+#     print("total images: ", n_total)
+#     n_train = int(TRAIN_SPLIT*n_total)
+#     print("training images: ", n_train)
+
+#     data_img_min = data.min(axis = (1, 2), keepdims = True)
+#     data_img_max = data.max(axis = (1, 2), keepdims = True)
+#     data = (data - data_img_min) / (data_img_max - data_img_min + epsilon)
+
+#     sol_img_min = sol.min(axis = (1, 2), keepdims = True)
+#     sol_img_max = sol.max(axis = (1, 2), keepdims = True)
+#     sol = (sol - sol_img_min) / (sol_img_max - sol_img_min + epsilon)
+
+#     data_train = data[:n_train]
+#     sol_train = sol[:n_train]
+
+#     data_tensor = torch.from_numpy(data_train).float().unsqueeze(1)
+#     sol_tensor = torch.from_numpy(sol_train).float().unsqueeze(1)
+#     dataset = TensorDataset(data_tensor, sol_tensor)
+#     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
+#     return dataloader
+
 def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
     if data_file[-3:] == "npz":
         data, sol, paras = functions.load_npz(data_file)
@@ -63,6 +95,8 @@ def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
         print("Data loading from .h5 file")
     else:
         raise DataFileFormatError(data_file[-5])
+    print("Full path: ", data_file)
+
 
     n_total = data.shape[0]
     print("total images: ", n_total)
@@ -85,6 +119,76 @@ def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
     dataset = TensorDataset(data_tensor, sol_tensor)
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
     return dataloader
+
+def visualize_data_distr(data, outputfile, title, bin_width = 0.02, only_first_batch = True):
+    if only_first_batch:
+        batch = next(iter(data))
+
+        noisy, clean = batch
+        arr_noisy = noisy.squeeze(1).detach().cpu().numpy().flatten()
+        arr_clean = clean.squeeze(1).detach().cpu().numpy().flatten()
+
+    else:
+        arr_noisy = []
+        arr_clean = []
+        for batch in data:
+            noisy, clean = batch
+            arr_noisy_current = noisy.squeeze(1).detach().cpu().numpy().flatten()
+            arr_clean_current = clean.squeeze(1).detach().cpu().numpy().flatten()
+            arr_noisy.append(arr_noisy_current)
+            arr_clean.append(arr_clean_current)
+
+    
+    min_val_noisy = np.floor(arr_noisy.min() / bin_width) * bin_width
+    max_val_noisy = np.floor(arr_noisy.max() / bin_width) * bin_width
+    bins_noisy = np.arange(min_val_noisy, max_val_noisy+bin_width, bin_width)
+    min_val_clean = np.floor(arr_clean.min() / bin_width) * bin_width
+    max_val_clean = np.floor(arr_clean.max() / bin_width) * bin_width
+    bins_clean = np.arange(min_val_clean, max_val_clean+bin_width, bin_width)
+
+    counts_noisy, bin_edges_noisy = np.histogram(arr_noisy, bins = bins_noisy)
+    counts_clean, bin_edges_clean = np.histogram(arr_clean, bins = bins_clean)
+
+    title_noisy = title + " #noisy_values"
+    title_clean = title + " #clean_values"
+
+    noisy = noisy.squeeze(1).detach().cpu().numpy()
+    clean = clean.squeeze(1).detach().cpu().numpy()
+
+    fig, axs = plt.subplots(4, 2, figsize=(16, 16))
+
+    axs[0][0].bar(bin_edges_noisy[:-1], counts_noisy, width=bin_width, align="edge", edgecolor="black")
+    axs[0][0].text(0.8, 8000, "min: " + str(arr_noisy.min()), fontsize = 10)
+    axs[0][0].text(0.8, 7000, "max: " + str(arr_noisy.max()), fontsize = 10)
+    axs[0][0].set_xlabel("Values")
+    axs[0][0].set_ylabel("Counts")
+    axs[0][0].set_title(title_noisy)
+
+    axs[0][1].bar(bin_edges_clean[:-1], counts_clean, width=bin_width, align="edge", edgecolor="black")
+    axs[0][1].text(0.8, 80000, "min: " + str(arr_clean.min()), fontsize = 10)
+    axs[0][1].text(0.8, 70000, "max: " + str(arr_clean.max()), fontsize = 10)
+    axs[0][1].set_xlabel("Values")
+    axs[0][1].set_ylabel("Counts")
+    axs[0][1].set_title(title_clean)
+
+    for i in range(3):
+        im_noisy = axs[i+1][0].imshow(noisy[i])
+        axs[i+1][0].set_xlabel("x")
+        axs[i+1][0].set_ylabel("y")
+        axs[i+1][0].set_title(f"title {['first','second','third'][i]} map noisy")
+        fig.colorbar(im_noisy, ax=axs[i+1][0])
+
+        im_clean = axs[i+1][1].imshow(clean[i])
+        axs[i+1][1].set_xlabel("x")
+        axs[i+1][1].set_ylabel("y")
+        axs[i+1][1].set_title(f"title {['first','second','third'][i]} map clean")
+        fig.colorbar(im_clean, ax=axs[i+1][1])
+
+    plt.tight_layout()
+    plt.savefig(outputfile)
+
+    print("Figure saved at: ", outputfile)
+    return None
 
 # UNET -------------------------------------------------------------------------------------------------------------------------------------
 

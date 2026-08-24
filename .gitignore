@@ -33,6 +33,10 @@ slurm-*.err
 # SLURM scripts
 *.sh
 
+# Notebooks
+notebooks/
+/notebooks/
+
 # Logs / experiment tracking
 logs/
 runs/

@@ -32,8 +32,8 @@ def radial_bin_indices(nx, ny):
     max_r = min(nx, ny) // 2
     return r, max_r
 
-def write_doc(doc_path: str, 
-              run_type: str, 
+def write_doc(run_type: str,
+              doc_path: str = None, 
               config_file: str = "../cmbNN_codes/config.py", 
               runtime = 0, 
               output_file: str = None
@@ -70,6 +70,7 @@ def write_doc(doc_path: str,
             "gaussian_smoothing_fwhm": config.maps_configs.gaussian_smoothing_fwhm,
             "output_h5": config.maps_configs.output_h5
         }
+        doc_path = config.maps_configs.doc_path
 
     elif run_type == "training":
 
@@ -87,6 +88,7 @@ def write_doc(doc_path: str,
             "model_name": config.training_configs.trained_model_name,
             "criterium": config.training_configs.crit,
         }
+        doc_path = config.training_configs.doc_path
 
     elif run_type == "evaluation":
 
@@ -104,6 +106,7 @@ def write_doc(doc_path: str,
             "data_range": config.evaluation_configs.DATA_RANGE,
             "title": config.evaluation_configs.TITLE,
         }
+        doc_path = config.evaluation_configs.doc_path
 
     else:
         print(f"The given step ({run_type}) does not fit the options (map_making, training, evaluation).",

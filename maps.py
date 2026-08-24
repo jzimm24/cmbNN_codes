@@ -1,12 +1,21 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import h5py
 import csv
 from datetime import datetime
 import time
+import torch
 
 import functions as functions
 
 import config as config
+
+
+#-------------------------------------------------------------------------------------------------------------------------
+class UnknownFileStructureError(ValueError):
+    pass
+#-------------------------------------------------------------------------------------------------------------------------
+
 
 def make_circle_map(map_size: int = 32, radius: float = 10, cx: float = 16, cy: float = 16):
     """
@@ -853,6 +862,67 @@ def save_dataset_csv(outpath, noisy_images, clean_images, I0s):
             writer.writerow(row)
     print(f"Wrote CSV dataset -> {outpath} (rows={n}, cols={2*H*W+1})")
 
+def visualize_maps(datafile, save_path, n: int = 1, ground_truth: bool = True):
+    if datafile[-3:] == ".h5":
+        with h5py.File(datafile, "r") as f:
+            data_noisy = f["noisy"]
+            num_maps = data_noisy.shape[0]
+            idx = np.random.randint(0, num_maps, size=n)
+            idx_sorted = np.sort(idx)
+            samples_noisy = data_noisy[idx_sorted]
+
+            data_clean = f["clean"]
+            samples_clean = data_clean[idx_sorted]
+
+            print(f"Samples [{idx_sorted}] loaded.")
+    elif datafile[-3:] == "npz":
+        data_noisy, data_clean, _ = functions.load_npz(path=datafile)
+        num_maps = data_noisy.shape[0]
+        idx = np.random.randint(0, num_maps, n)
+        idx_sorted = np.sort(idx)
+
+        samples_noisy = data_noisy[idx_sorted]
+        samples_clean = data_clean[idx_sorted]
+    else:
+        raise UnknownFileStructureError(datafile[-7:])
+    
+    if ground_truth:
+        fig, axes = plt.subplots(n, 2, figsize=(5, 5))
+        axes = np.atleast_2d(axes)
+        for k in range(n):
+            img_noisy = samples_noisy[k]
+            img_clean = samples_clean[k]
+
+            im_noisy = axes[k, 0].imshow(img_noisy, cmap="viridis")
+            im_clean = axes[k, 1].imshow(img_clean, cmap="viridis")
+
+            axes[k, 0].set_title(f"Noisy #{k}")
+            axes[k, 1].set_title(f"Clean #{k}")
+
+            fig.colorbar(im_noisy, ax=axes[k, 0], fraction=0.046, pad=0.04)
+            fig.colorbar(im_clean, ax=axes[k, 1], fraction=0.046, pad=0.04)
+    else:
+        fig, axes = plt.subplots(1, n, figsize=(5, 5))
+        axes = np.atleast_2d(axes)
+        for k in range(n):
+            img_noisy = samples_noisy[k]
+            im_noisy = axes[k].imshow(img_noisy, cmap="viridis")
+            axes[k].set_title("Noisy")
+            fig.colorbar(im_noisy, ax=axes[k], fraction=0.046, pad=0.04)
+
+    title = datetime.now().isoformat() + "-" + datafile
+    fig.suptitle(title)
+
+    plt.tight_layout()
+    fig.savefig(save_path, bbox_inches="tight")
+    print(f"Figure saved to: {save_path}")
+
+    plt.close(fig)
+
+
+    return None
+
+
 def main():
 
     start_time = time.perf_counter()
@@ -899,6 +969,8 @@ def main():
             I0 = []
             rc_used = []
             for k in range(source_number):
+                x_shift = min(rng.normal(x_shift_mean, x_shift_var), x_shift_max)
+                y_shift = min(rng.normal(y_shift_mean, y_shift_var), y_shift_max)
                 img_current, I0_current, rc_used_current = generate_beta_model_image_logI0(
                     size=image_size,
                     rc_mean=rc_mean,
@@ -917,6 +989,8 @@ def main():
             I0 = []
             rc_used = []
             for k in range(source_number):
+                x_shift = min(rng.normal(x_shift_mean, x_shift_var), x_shift_max)
+                y_shift = min(rng.normal(y_shift_mean, y_shift_var), y_shift_max)
                 img_current, I0_current, rc_used_current = generate_beta_model_image_gaussI0(
                     size=image_size,
                     rc_mean=rc_mean,
@@ -998,7 +1072,7 @@ def main():
 
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
-    functions.write_doc("../outputs/docs/first_doc_test.txt", "map_making", runtime=elapsed_time, output_file=output_h5)
+    functions.write_doc("map_making", runtime=elapsed_time, output_file=output_h5)
 
     return None
 
@@ -1016,5 +1090,6 @@ def main():
 #     return None
 
 if __name__ == "__main__":
-    print("Executing main() in maps.py")
-    main()
+    #print("Executing main() in maps.py")
+    #main()
+    visualize_maps("../data/test1108.h5", "../outputs/test11.png", n=2)
