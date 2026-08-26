@@ -83,14 +83,16 @@ class training_config(NamedTuple):
     model: str = "UNET"
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     NUM_EPOCHS = 3
-    BATCH_SIZE = 16
+    BATCH_SIZE = 32
     LR = 1e-4
-    IMG_DIM = maps_image_size
-    DATA_FILE = maps_output_h5
+    IMG_DIM = 64
+    DATA_FILE = "../data/10k_64_multicircle_32xs32xy40.npz"
     TRAIN_SPLIT = 1-0.05
-    trained_model_name = "../models/test2"
+    trained_model_name = "../models/unet_simpleData_2508"
     crit = nn.BCEWithLogitsLoss() 
-    doc_path = "../outputs/docs/training_doc.txt"
+    doc_path = "../outputs/docs/unet_simpleData_2508.txt"
+    visualization = True
+    visualization_file = "../outputs/value_vis2508.png"
 
 training_configs = training_config()
 
@@ -103,12 +105,12 @@ class eval_config(NamedTuple):
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
     modelArchitecture = training_configs.model
-    MODEL_FILE = "../models/test2_epoch_3.pth"
+    MODEL_FILE = "../models/unet_simpleData_2508_epoch_3.pth"       # has to be manually inserted because of added epoch info in model save state
     DATA_FILE = training_configs.DATA_FILE
-    OUTPUT_FILE = "2307_easyData2.png"
+    OUTPUT_FILE = "unet_simple_Data_2508_eval_normalized.png"
 
-    EVAL_SPLIT = 0.05
-    BATCH_SIZE = 16
+    EVAL_SPLIT = 1 - training_configs.TRAIN_SPLIT
+    BATCH_SIZE = 32
 
 
     IMG_SIZE = training_configs.IMG_DIM
@@ -117,6 +119,6 @@ class eval_config(NamedTuple):
 
     TITLE = OUTPUT_FILE
 
-    doc_path = "../outputs/docs/eval_doc.txt"
+    doc_path = "../outputs/docs/2508_simpleData_eval_normalized_doc.txt"
 
 evaluation_configs = eval_config()

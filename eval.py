@@ -68,13 +68,14 @@ def load_model(path: str = MODEL_FILE, device: str = DEVICE):
 
     return model
 
-def load_random_sample(path: str, seed = 42):       #TODO: load random sample from part of the dataloader that was saved for evaluation
+def load_random_sample(path: str, seed = 42, epsilon = 1e-8):       #TODO: load random sample from part of the dataloader that was saved for evaluation
     np.random.seed(seed)
     if path[-3:] == ".h5":
         with h5py.File(path, "r") as f:
             dataset = f["noisy"]
             num_maps = dataset.shape[0]
             idx = np.random.randint(0, num_maps)
+            print(f"Randomly chosen index: {idx}.")
             sample_noisy = dataset[idx]
 
             dataset_clean = f["clean"]
@@ -85,14 +86,22 @@ def load_random_sample(path: str, seed = 42):       #TODO: load random sample fr
         dataset_noisy, dataset_clean, _ = functions.load_npz(path=path)
         num_maps = dataset_noisy.shape[0]
         idx = np.random.randint(0, num_maps)
+        print(f"Randomly chosen index: {idx}.")
 
         sample_noisy = dataset_noisy[idx]
         sample_clean = dataset_clean[idx]
+        print(f"Sample [{idx}] loaded.")
+
     else:
         raise UnknownFileStructureError(path[-7:])
+    
+    print("#################")
+    print(sample_noisy.shape)
+    sample_noisy_normalized = functions.normalize_map(sample_noisy, epsilon)
+    sample_clean_normalized = functions.normalize_map(sample_clean, epsilon)
 
-    tensor_noisy = torch.from_numpy(sample_noisy).float().unsqueeze(0).unsqueeze(0)
-    tensor_clean = torch.from_numpy(sample_clean).float().unsqueeze(0).unsqueeze(0)
+    tensor_noisy = torch.from_numpy(sample_noisy_normalized).float().unsqueeze(0).unsqueeze(0)
+    tensor_clean = torch.from_numpy(sample_clean_normalized).float().unsqueeze(0).unsqueeze(0)
     return tensor_noisy, tensor_clean
 
 def example_forward_pass(model, sample = None, path = DATA_FILE):
@@ -371,7 +380,7 @@ def main():
 
     model = load_model()
     model.eval()
-    noisy, clean = load_random_sample()
+    noisy, clean = load_random_sample(DATA_FILE)
     noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
     make_figures([noisy, prediction, clean])
     #
@@ -393,7 +402,7 @@ def main():
 
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
-    functions.write_doc("../outputs/docs/first_doc_test4.txt", "evaluation", runtime=elapsed_time, output_file=OUTPUT_FILE)
+    functions.write_doc("evaluation", "../outputs/docs/first_doc_test4.txt", runtime=elapsed_time, output_file=OUTPUT_FILE)
 
 if __name__ == "__main__":
     print("Executing main() in eval.py")

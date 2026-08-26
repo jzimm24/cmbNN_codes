@@ -24,6 +24,19 @@ def load_h5py(path: str):
         Y = f["clean"][:]
     return X, Y
 
+def normalize_data(data, epsilon = 1e-8):
+    data_min = data.min(axis = (1, 2), keepdims = True)
+    data_max = data.max(axis = (1, 2), keepdims = True)
+    data = (data - data_min) / (data_max - data_min + epsilon)
+    return data
+
+def normalize_map(map, epsilon = 1e-8):
+    map_min = map.min()
+    map_max = map.max()
+    print(map_min, map_max)
+    map = (map - map_min) / (map_max - map_min + epsilon)
+    return map
+
 def radial_bin_indices(nx, ny):
     x, y = np.indices((nx, ny))
     center = (nx//2, ny//2)
@@ -33,8 +46,7 @@ def radial_bin_indices(nx, ny):
     return r, max_r
 
 def write_doc(run_type: str,
-              doc_path: str = None, 
-              config_file: str = "../cmbNN_codes/config.py", 
+              doc_path: str = None,
               runtime = 0, 
               output_file: str = None
               ):

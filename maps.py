@@ -1076,20 +1076,19 @@ def main():
 
     return None
 
-# def main():
+def main_simple():
 
-#     #number of images
-#     n = 10000
-#     #directory of data
-#     filename = "../data/10k_64_multicircle_32xs32xy40"
+    #number of images
+    n = 10000
+    #directory of data
+    filename = "../data/10k_64_multicircle_32xs32xy40"
 
-#     multiple_circles_test_maps, multiple_circles_test_doc = make_random_multiple_circle_maps(n, 64, 3, 10, 5, 5, 32, 32, 32, 32, 40, 42)
-#     noise_maps = make_noise_maps(n, 64, 3, 42)
-#     multiple_circles_test_maps_withNoise = noise_maps + multiple_circles_test_maps
-#     save_maps(multiple_circles_test_maps_withNoise, multiple_circles_test_maps, multiple_circles_test_doc, filename)
-#     return None
+    multiple_circles_test_maps, multiple_circles_test_doc = make_random_multiple_circle_maps(n, 64, 3, 10, 5, 5, 32, 32, 32, 32, 40, 42)
+    noise_maps = make_noise_maps(n, 64, 3, 42)
+    multiple_circles_test_maps_withNoise = noise_maps + multiple_circles_test_maps
+    save_maps(multiple_circles_test_maps_withNoise, multiple_circles_test_maps, multiple_circles_test_doc, filename)
+    return None
 
 if __name__ == "__main__":
-    #print("Executing main() in maps.py")
-    #main()
-    visualize_maps("../data/test1108.h5", "../outputs/test11.png", n=2)
+    print("Executing main() in maps.py")
+    main_simple()

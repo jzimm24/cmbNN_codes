@@ -42,6 +42,9 @@ trained_model_name = config.training_configs.trained_model_name
 #crit = nn.BCEWithLogitsLoss() 
 crit = config.training_configs.crit
 
+data_visualization = config.training_configs.visualization
+visualization_file = config.training_configs.visualization_file
+
 # General ---------------------------------------------------------------------------------------------------------------------------------
 
 def log_memory_usage():
@@ -120,7 +123,7 @@ def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
     return dataloader
 
-def visualize_data_distr(data, outputfile, title, bin_width = 0.02, only_first_batch = True):
+def visualize_data_distr(data, outputfile, title, bin_width = 0.02, only_first_batch = True, top_bin_focus = False):
     if only_first_batch:
         batch = next(iter(data))
 
@@ -165,6 +168,8 @@ def visualize_data_distr(data, outputfile, title, bin_width = 0.02, only_first_b
     axs[0][0].set_title(title_noisy)
 
     axs[0][1].bar(bin_edges_clean[:-1], counts_clean, width=bin_width, align="edge", edgecolor="black")
+    if top_bin_focus:
+        axs[0][1].set_ylim(0, (arr_clean.shape[0]/(clean.shape[1]*clean.shape[2])) * 10)
     axs[0][1].text(0.8, 80000, "min: " + str(arr_clean.min()), fontsize = 10)
     axs[0][1].text(0.8, 70000, "max: " + str(arr_clean.max()), fontsize = 10)
     axs[0][1].set_xlabel("Values")
@@ -334,6 +339,8 @@ def main():
     start_time = time.perf_counter()
 
     dataloader = data_load_and_prep()
+    if data_visualization:
+        visualize_data_distr(dataloader, visualization_file, visualization_file[:-4])
 
     if model == "UNET":
         unet, unet_optimizer = init_UNET_model()
@@ -350,7 +357,7 @@ def main():
 
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
-    functions.write_doc("../outputs/docs/first_doc_test2.txt", "training", runtime=elapsed_time, output_file=trained_model_name)
+    functions.write_doc(run_type="training", doc_path="../outputs/docs/first_doc_test2.txt", runtime=elapsed_time, output_file=trained_model_name)
 
     return None
 
