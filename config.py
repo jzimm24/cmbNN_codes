@@ -44,8 +44,8 @@ class maps_config(NamedTuple):
     save_mode = "hdf5"
     flux_mode = "gauss"
 
-    num_images = 10
-    image_size = 164
+    num_images = 10000
+    image_size = 128
     max_source_number = 4
 
     seed = 42                   #seed for random value selection
@@ -69,9 +69,11 @@ class maps_config(NamedTuple):
     gaussian_smoothing_fwhm  = 1.0        # if >0, smooth final image with this FWHM   --> DEFAULT 5 PIXELS
 
 
-    output_h5               = '../data/test1108.h5'
+    output_h5               = '../data/realNoise128_10k_2WN_3f_2808.h5'
 
-    doc_path = "../outputs/docs/map_doc.txt"
+    doc_path = "../outputs/docs/realNoise128_10k_2WN_3f_2808_doc.txt"
+
+    visualization_path = "../outputs/realNoise128_10k_2WN_3f_2808_preNorm.png"
 
 maps_configs = maps_config()
 

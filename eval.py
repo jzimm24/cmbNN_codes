@@ -140,7 +140,7 @@ def make_figures(maps, save_path: str = "../outputs/" + OUTPUT_FILE, title: str 
     plt.close(fig)
     return None
 
-def load_eval_data(data_file):
+def load_and_prep_eval_data(data_file, epsilon = 1e-8):
     if 1-EVAL_SPLIT != training.TRAIN_SPLIT:
         print("TRAIN_SPLIT not consistently defined. Continuing with eval.TRAIN_SPLIT.")
     print("EVAL_SPLIT: ", EVAL_SPLIT)
@@ -159,8 +159,11 @@ def load_eval_data(data_file):
     data_eval = data[(n_total-n_eval):]
     sol_eval = sol[(n_total - n_eval):]
 
-    data_tensor = torch.from_numpy(data_eval).float().unsqueeze(1)
-    sol_tensor = torch.from_numpy(sol_eval).float().unsqueeze(1)
+    data_eval_normalized = functions.normalize_data(data_eval, epsilon)
+    sol_eval_normalized = functions.normalize_data(sol_eval, epsilon)
+
+    data_tensor = torch.from_numpy(data_eval_normalized).float().unsqueeze(1)
+    sol_tensor = torch.from_numpy(sol_eval_normalized).float().unsqueeze(1)
     dataset = TensorDataset(data_tensor, sol_tensor)
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False)
     return dataloader
@@ -176,7 +179,7 @@ def eval_MSE(model = None, data = None, model_file = MODEL_FILE, data_file = DAT
         if data_file is None:
             raise DataAccessibilityError()
         else:
-            dataloader = load_eval_data(data_file)
+            dataloader = load_and_prep_eval_data(data_file)
     else:
         dataloader = data
     mse_loss = nn.MSELoss(reduction="sum")
@@ -213,7 +216,7 @@ def eval_PSNR(model=None, data = None, model_file = MODEL_FILE, data_file = DATA
         if data_file is None:
             raise DataAccessibilityError()
         else:
-            dataloader = load_eval_data(data_file)
+            dataloader = load_and_prep_eval_data(data_file)
     else:
         dataloader = data
     single_image_mse = []
@@ -249,7 +252,7 @@ def eval_ssim(model=None, data = None, model_file = MODEL_FILE, data_file = DATA
         if data_file is None:
             raise DataAccessibilityError()
         else:
-            dataloader = load_eval_data(data_file)
+            dataloader = load_and_prep_eval_data(data_file)
     else:
         dataloader = data
     single_image_ssim = []
@@ -304,7 +307,7 @@ def eval_power_spectrum(model = None, data = None, model_path = None, data_file 
         if data_file is None:
             raise DataAccessibilityError()
         else:
-            dataloader = load_eval_data(data_file)
+            dataloader = load_and_prep_eval_data(data_file)
     else:
         dataloader = data
 

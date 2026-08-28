@@ -287,6 +287,8 @@ gaussian_smoothing_fwhm  = config.maps_configs.gaussian_smoothing_fwhm        # 
 
 output_h5               = config.maps_configs.output_h5
 
+visualization_path = config.maps_configs.visualization_path
+
 def generate_beta_model_image(size, 
                               rc_mean, 
                               rc_sigma,
@@ -1074,21 +1076,24 @@ def main():
     elapsed_time = end_time - start_time
     functions.write_doc("map_making", runtime=elapsed_time, output_file=output_h5)
 
+    print("Plotting example maps.")    
+    visualize_maps(output_h5, visualization_path, n=4)
+    print("Done!")
     return None
 
-def main_simple():
+# def main():
 
-    #number of images
-    n = 10000
-    #directory of data
-    filename = "../data/10k_64_multicircle_32xs32xy40"
+#     #number of images
+#     n = 10000
+#     #directory of data
+#     filename = "../data/10k_64_multicircle_32xs32xy40"
 
-    multiple_circles_test_maps, multiple_circles_test_doc = make_random_multiple_circle_maps(n, 64, 3, 10, 5, 5, 32, 32, 32, 32, 40, 42)
-    noise_maps = make_noise_maps(n, 64, 3, 42)
-    multiple_circles_test_maps_withNoise = noise_maps + multiple_circles_test_maps
-    save_maps(multiple_circles_test_maps_withNoise, multiple_circles_test_maps, multiple_circles_test_doc, filename)
-    return None
+#     multiple_circles_test_maps, multiple_circles_test_doc = make_random_multiple_circle_maps(n, 64, 3, 10, 5, 5, 32, 32, 32, 32, 40, 42)
+#     noise_maps = make_noise_maps(n, 64, 3, 42)
+#     multiple_circles_test_maps_withNoise = noise_maps + multiple_circles_test_maps
+#     save_maps(multiple_circles_test_maps_withNoise, multiple_circles_test_maps, multiple_circles_test_doc, filename)
+#     return None
 
 if __name__ == "__main__":
     print("Executing main() in maps.py")
-    main_simple()
+    main()
