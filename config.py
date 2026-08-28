@@ -51,7 +51,7 @@ class maps_config(NamedTuple):
     seed = 42                   #seed for random value selection
 
 
-    rc_mean  = 3.0                       # r_c in the β‐model (pixels)   --> DEFAULT 7 PIXELS
+    rc_mean  = 7.0                       # r_c in the β‐model (pixels)   --> DEFAULT 7 PIXELS
     rc_sigma = 2.0                       # std dev in r_c (in pixels)   --> DEFAULT sigma=2 PIXELS
 
 
@@ -71,9 +71,9 @@ class maps_config(NamedTuple):
 
     output_h5               = '../data/realNoise128_10k_2WN_3f_2808.h5'
 
-    doc_path = "../outputs/docs/realNoise128_10k_2WN_3f_2808_doc.txt"
+    doc_path = "../outputs/docs/realNoise128_10k_7rc_1WN_3f_2808_doc.txt"
 
-    visualization_path = "../outputs/realNoise128_10k_2WN_3f_2808_preNorm.png"
+    visualization_path = "../outputs/realNoise128_10k_7rc_1WN_3f_2808_preNorm.png"
 
 maps_configs = maps_config()
 
@@ -84,17 +84,17 @@ maps_configs = maps_config()
 class training_config(NamedTuple):
     model: str = "UNET"
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    NUM_EPOCHS = 3
+    NUM_EPOCHS = 16
     BATCH_SIZE = 32
     LR = 1e-4
-    IMG_DIM = 64
-    DATA_FILE = "../data/10k_64_multicircle_32xs32xy40.npz"
+    IMG_DIM = 128
+    DATA_FILE = "../data/realNoise128_10k_7rc_1WN_3f_2808.h5"
     TRAIN_SPLIT = 1-0.05
-    trained_model_name = "../models/unet_simpleData_2508"
+    trained_model_name = "../models/unet_realNoise128_10k_7rc_1WN_3f_2808"
     crit = nn.BCEWithLogitsLoss() 
-    doc_path = "../outputs/docs/unet_simpleData_2508.txt"
+    doc_path = "../outputs/docs/unet_realNoise128_10k_7rc_1WN_3f_2808.txt"
     visualization = True
-    visualization_file = "../outputs/value_vis2508.png"
+    visualization_file = "../outputs/realNoise128_10k_7rc_1WN_3f_2808_postNorm.png"
 
 training_configs = training_config()
 
