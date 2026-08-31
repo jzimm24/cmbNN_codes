@@ -161,8 +161,8 @@ def visualize_data_distr(data, outputfile, title, bin_width = 0.02, only_first_b
     fig, axs = plt.subplots(4, 2, figsize=(16, 16))
 
     axs[0][0].bar(bin_edges_noisy[:-1], counts_noisy, width=bin_width, align="edge", edgecolor="black")
-    axs[0][0].text(0.8, 8000, "min: " + str(arr_noisy.min()), fontsize = 10)
-    axs[0][0].text(0.8, 7000, "max: " + str(arr_noisy.max()), fontsize = 10)
+    axs[0][0].text(0.8, 7000, "min: " + str(arr_noisy.min()), fontsize = 10)
+    axs[0][0].text(0.8, 10000, "max: " + str(arr_noisy.max()), fontsize = 10)
     axs[0][0].set_xlabel("Values")
     axs[0][0].set_ylabel("Counts")
     axs[0][0].set_title(title_noisy)
@@ -170,8 +170,8 @@ def visualize_data_distr(data, outputfile, title, bin_width = 0.02, only_first_b
     axs[0][1].bar(bin_edges_clean[:-1], counts_clean, width=bin_width, align="edge", edgecolor="black")
     if top_bin_focus:
         axs[0][1].set_ylim(0, (arr_clean.shape[0]/(clean.shape[1]*clean.shape[2])) * 10)
-    axs[0][1].text(0.8, 80000, "min: " + str(arr_clean.min()), fontsize = 10)
-    axs[0][1].text(0.8, 70000, "max: " + str(arr_clean.max()), fontsize = 10)
+    axs[0][1].text(0.8, 70000, "min: " + str(arr_clean.min()), fontsize = 10)
+    axs[0][1].text(0.8, 100000, "max: " + str(arr_clean.max()), fontsize = 10)
     axs[0][1].set_xlabel("Values")
     axs[0][1].set_ylabel("Counts")
     axs[0][1].set_title(title_clean)
