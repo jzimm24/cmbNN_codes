@@ -388,17 +388,16 @@ def main():
 
     start_time = time.perf_counter()
 
-    model = load_model()
-    model.eval()
-    noisy, clean = load_random_sample(DATA_FILE)
-    noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
-    make_figures([noisy, prediction, clean])
-    #
+    # model = load_model()
+    # model.eval()
+    # noisy, clean = load_random_sample(DATA_FILE)
+    # noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
+    # make_figures([noisy, prediction, clean])
     
-    #  total_mse, mse_list = eval_MSE(model_file="../models/0507_unetTest_noWN_A7_epoch_1.pth", data_file="../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
-    # print("Total MSE: ", total_mse)
-    # print("Max MSE: ", max(mse_list))
-    # print("#########################################################")
+    total_mse, mse_list = eval_MSE(model_file=MODEL_FILE, data_file=DATA_FILE)
+    print("Total MSE: ", total_mse)
+    print("Max MSE: ", max(mse_list))
+    print("#########################################################")
     
     # psnr_list = eval_PSNR(model_file="../models/0507_unetTest_noWN_A7_epoch_1.pth", data_file="../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
     # print("PSNR Max: ", max(psnr_list))
