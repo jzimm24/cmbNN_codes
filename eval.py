@@ -97,8 +97,8 @@ def load_random_sample(path: str, seed = 42, epsilon = 1e-8):       #TODO: load 
     
     print("#################")
     print(sample_noisy.shape)
-    sample_noisy_normalized = functions.normalize_map(sample_noisy, epsilon)
-    sample_clean_normalized = functions.normalize_map(sample_clean, epsilon)
+    sample_noisy_normalized, _, _ = functions.normalize_map(sample_noisy, epsilon)
+    sample_clean_normalized, _, _ = functions.normalize_map(sample_clean, epsilon)
 
     tensor_noisy = torch.from_numpy(sample_noisy_normalized).float().unsqueeze(0).unsqueeze(0)
     tensor_clean = torch.from_numpy(sample_clean_normalized).float().unsqueeze(0).unsqueeze(0)
@@ -112,7 +112,7 @@ def example_forward_pass(model, sample = None, path = DATA_FILE):
     ground_truth = sample[1].to(DEVICE)
     return sample_on_device, output, ground_truth
 
-def make_figures(maps, save_path: str = "../outputs/" + OUTPUT_FILE, title: str = TITLE):
+def make_figures(maps, save_path: str = "outputs/" + OUTPUT_FILE, title: str = TITLE):
     n = len(maps)
     fig, axes = plt.subplots(1, n, figsize=(5 * n, 5))
     if n == 1:
@@ -388,16 +388,16 @@ def main():
 
     start_time = time.perf_counter()
 
-    # model = load_model()
-    # model.eval()
-    # noisy, clean = load_random_sample(DATA_FILE)
-    # noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
-    # make_figures([noisy, prediction, clean])
+    model = load_model()
+    model.eval()
+    noisy, clean = load_random_sample(DATA_FILE)
+    noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
+    make_figures([noisy, prediction, clean])
     
-    total_mse, mse_list = eval_MSE(model_file=MODEL_FILE, data_file=DATA_FILE)
-    print("Total MSE: ", total_mse)
-    print("Max MSE: ", max(mse_list))
-    print("#########################################################")
+    # total_mse, mse_list = eval_MSE(model_file=MODEL_FILE, data_file=DATA_FILE)
+    # print("Total MSE: ", total_mse)
+    # print("Max MSE: ", max(mse_list))
+    # print("#########################################################")
     
     # psnr_list = eval_PSNR(model_file="../models/0507_unetTest_noWN_A7_epoch_1.pth", data_file="../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
     # print("PSNR Max: ", max(psnr_list))

@@ -107,9 +107,9 @@ class eval_config(NamedTuple):
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
     modelArchitecture = "UNET"
-    MODEL_FILE = "/home/user/Physik_Bonn/master_thesis/codes/cmbNN/models/unet_simpleData_2508_epoch_3.pth"       # has to be manually inserted because of added epoch info in model save state
-    DATA_FILE = "/home/user/Physik_Bonn/master_thesis/codes/cmbNN/data/realNoise128_10k_2WN_3f_2808.h5"
-    OUTPUT_FILE = "unet_simple_Data_2508_eval_normalized.png"
+    MODEL_FILE = "models/unet_realNoise128_10k_7rc_1WN_3f_2808_epoch_16.pth"       # has to be manually inserted because of added epoch info in model save state
+    DATA_FILE = "data/realNoise128_10k_7rc_1WN_3f_2808.h5"
+    OUTPUT_FILE = "unet_realNoise128_10k_7rc_3f_2808_eval_normalized.png"
 
     EVAL_SPLIT = 1 - training_configs.TRAIN_SPLIT
     BATCH_SIZE = 32
@@ -121,6 +121,6 @@ class eval_config(NamedTuple):
 
     TITLE = OUTPUT_FILE
 
-    doc_path = "../outputs/docs/0109_unet_simpleData_eval_normalized_doc.txt"
+    doc_path = "outputs/docs/0109_unet_simpleData_eval_normalized_doc.txt"
 
 evaluation_configs = eval_config()
