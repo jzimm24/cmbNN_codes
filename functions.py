@@ -28,14 +28,15 @@ def normalize_data(data, epsilon = 1e-8):
     data_min = data.min(axis = (1, 2), keepdims = True)
     data_max = data.max(axis = (1, 2), keepdims = True)
     data = (data - data_min) / (data_max - data_min + epsilon)
-    return data
+    amp = data_max - data_min + epsilon
+    return data, amp, data_min
 
 def normalize_map(map, epsilon = 1e-8):
     map_min = map.min()
     map_max = map.max()
-    print(map_min, map_max)
     map = (map - map_min) / (map_max - map_min + epsilon)
-    return map
+    amp = map_max - map_min + epsilon
+    return map, amp, map_min
 
 def radial_bin_indices(nx, ny):
     x, y = np.indices((nx, ny))
