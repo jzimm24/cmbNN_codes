@@ -82,19 +82,19 @@ maps_configs = maps_config()
 # Training
 
 class training_config(NamedTuple):
-    model: str = "GAN"
+    model: str = "unet"
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    NUM_EPOCHS = 16
+    NUM_EPOCHS = 3
     BATCH_SIZE = 32
     LR = 1e-4
     IMG_DIM = 128
-    DATA_FILE = "../data/realNoise128_10k_7rc_1WN_3f_2808.h5"
+    DATA_FILE = "../data/realNoise128_10k_2WN_3f_2808.h5"
     TRAIN_SPLIT = 1-0.05
-    trained_model_name = "../models/gan_realNoise128_10k_7rc_1WN_3f_2808"
+    trained_model_name = "../models/unet_realNoise128_10k_2WN_3f_2808"
     crit = nn.BCEWithLogitsLoss() 
     doc_path = "../outputs/docs/gan_realNoise128_10k_7rc_1WN_3f_2808.txt"
     visualization = False
-    visualization_file = "../outputs/realNoise128_10k_7rc_1WN_3f_2808_postNorm.png"
+    visualization_file = "../outputs/realNoise128_10k_2WN_3f_2808_postNorm.png"
 
 training_configs = training_config()
 
@@ -107,8 +107,8 @@ class eval_config(NamedTuple):
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
     modelArchitecture = "UNET"
-    MODEL_FILE = "models/unet_realNoise128_10k_7rc_1WN_3f_2808_epoch_16.pth"       # has to be manually inserted because of added epoch info in model save state
-    DATA_FILE = "data/realNoise128_10k_7rc_1WN_3f_2808.h5"
+    MODEL_FILE = "../models/unet_realNoise128_10k_2WN_3f_2808_epoch_3.pth"       # has to be manually inserted because of added epoch info in model save state
+    DATA_FILE = "../data/realNoise128_10k_2WN_3f_2808.h5"
     OUTPUT_FILE = "unet_realNoise128_10k_7rc_3f_2808_eval_normalized.png"
 
     EVAL_SPLIT = 1 - training_configs.TRAIN_SPLIT
@@ -121,6 +121,6 @@ class eval_config(NamedTuple):
 
     TITLE = OUTPUT_FILE
 
-    doc_path = "outputs/docs/0109_unet_simpleData_eval_normalized_doc.txt"
+    doc_path = "../outputs/docs/unet_realNoise128_10k_7rc_3f_2808_eval_normalized_doc.txt"
 
 evaluation_configs = eval_config()

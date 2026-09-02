@@ -106,13 +106,11 @@ def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
     n_train = int(TRAIN_SPLIT*n_total)
     print("training images: ", n_train)
 
-    data_img_min = data.min(axis = (1, 2), keepdims = True)
-    data_img_max = data.max(axis = (1, 2), keepdims = True)
-    data = (data - data_img_min) / (data_img_max - data_img_min + epsilon)
+    data, amp_vals_noisy, min_vals_noisy = functions.normalize_data(data)
+    data_denorm_vals = (min_vals_noisy, amp_vals_noisy)
 
-    sol_img_min = sol.min(axis = (1, 2), keepdims = True)
-    sol_img_max = sol.max(axis = (1, 2), keepdims = True)
-    sol = (sol - sol_img_min) / (sol_img_max - sol_img_min + epsilon)
+    sol, amp_vals_clean, min_vals_clean = functions.normalize_data(sol)
+    sol_denorm_vals = (min_vals_clean, amp_vals_clean)
 
     data_train = data[:n_train]
     sol_train = sol[:n_train]
@@ -121,7 +119,7 @@ def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
     sol_tensor = torch.from_numpy(sol_train).float().unsqueeze(1)
     dataset = TensorDataset(data_tensor, sol_tensor)
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
-    return dataloader
+    return dataloader, data_denorm_vals, sol_denorm_vals
 
 def visualize_data_distr(data, outputfile, title, bin_width = 0.02, only_first_batch = True, top_bin_focus = False):
     if only_first_batch:
@@ -338,15 +336,15 @@ def main():
 
     start_time = time.perf_counter()
 
-    dataloader = data_load_and_prep()
+    dataloader, _, _ = data_load_and_prep()
     if data_visualization:
         visualize_data_distr(dataloader, visualization_file, visualization_file[:-4])
 
-    if model == "UNET":
+    if model == "UNET" or model == "unet":
         unet, unet_optimizer = init_UNET_model()
         unet.train()
         training_and_saving_UNET_model(unet, unet_optimizer, dataloader)
-    elif model == "GAN":
+    elif model == "GAN" or model == "gan":
         generator, generator_optimizer, discriminator, discriminator_optimizer = init_GAN_models()
         generator.train()
         discriminator.train()

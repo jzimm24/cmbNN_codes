@@ -112,7 +112,7 @@ def example_forward_pass(model, sample = None, path = DATA_FILE):
     ground_truth = sample[1].to(DEVICE)
     return sample_on_device, output, ground_truth
 
-def make_figures(maps, save_path: str = "outputs/" + OUTPUT_FILE, title: str = TITLE):
+def make_figures(maps, save_path: str = "../outputs/" + OUTPUT_FILE, title: str = TITLE):
     n = len(maps)
     fig, axes = plt.subplots(1, n, figsize=(5 * n, 5))
     if n == 1:
