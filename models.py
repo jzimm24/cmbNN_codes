@@ -47,6 +47,7 @@ class UNET(nn.Module):
 
         self.bottleneck = DoubleConv(features[-1], features[-1]*2)
         self.final_conv = nn.Conv2d(features[0], out_channels, kernel_size=1)
+        self.final_normalization = functions.normalize_map        # essential for [0, 1] value spectrum
 
     def forward(self, x):
 
@@ -68,8 +69,9 @@ class UNET(nn.Module):
 
             concat_skip = torch.cat((skip_connection, x), dim=1)
             x = self.ups[idx+1](concat_skip)
-
-        return self.final_conv(x)
+        x = self.final_conv(x)
+        x, _, _ = self.final_normalization(x)
+        return x
 
 # Loss
 def L1L2Loss(pred, target, l1_weight = 1, l2_weight = 1):
