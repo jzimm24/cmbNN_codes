@@ -358,7 +358,7 @@ def main():
 
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
-    functions.write_doc(run_type="training" runtime=elapsed_time, output_file=trained_model_name)
+    functions.write_doc(run_type="training", runtime=elapsed_time, output_file=trained_model_name)
 
     return None
 
