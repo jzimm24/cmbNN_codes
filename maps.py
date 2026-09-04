@@ -865,6 +865,20 @@ def save_dataset_csv(outpath, noisy_images, clean_images, I0s):
     print(f"Wrote CSV dataset -> {outpath} (rows={n}, cols={2*H*W+1})")
 
 def visualize_maps(datafile, save_path, n: int = 1, ground_truth: bool = True):
+    """
+    Visualize n created maps and potentially their corresponding clean groundtruths.
+
+    Parameters
+    ----------
+    datafile (str): datafile from which the mas are chosen
+    save_path (str): filepath where the plots are saved
+    n (int): number of maps/map pairs
+    ground_truth(boolean): Determines if groundtruths should be plotted as well
+
+    Returns
+    -------
+    None
+    """
     if datafile[-3:] == ".h5":
         with h5py.File(datafile, "r") as f:
             data_noisy = f["noisy"]
