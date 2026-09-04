@@ -106,10 +106,10 @@ def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
     n_train = int(TRAIN_SPLIT*n_total)
     print("training images: ", n_train)
 
-    data, amp_vals_noisy, min_vals_noisy = functions.normalize_data(data)
+    data, amp_vals_noisy, min_vals_noisy = functions.normalize_data(data, epsilon=epsilon)
     data_denorm_vals = (min_vals_noisy, amp_vals_noisy)
 
-    sol, amp_vals_clean, min_vals_clean = functions.normalize_data(sol)
+    sol, amp_vals_clean, min_vals_clean = functions.normalize_data(sol, epsilon=epsilon)
     sol_denorm_vals = (min_vals_clean, amp_vals_clean)
 
     data_train = data[:n_train]
@@ -198,9 +198,12 @@ def visualize_data_distr(data, outputfile, title, bin_width = 0.02, only_first_b
 def init_UNET_model(in_chanels: int = 1,
                 out_chanels: int = 1,
                 device = DEVICE,
-                img_dim = IMG_DIM,
-                lr = LR):
-    unet = models.UNET(in_chanels, out_chanels).to(device)
+                lr = LR,
+                auto_normalization = True):
+    if auto_normalization:
+        unet = models.UNET_normalization(in_chanels, out_chanels).to(device)
+    else:
+        unet = models.UNET(in_chanels, out_chanels).to(device)
     unet_optimizer = torch.optim.Adam(unet.parameters(), lr=lr)
 
     return unet, unet_optimizer

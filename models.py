@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader, TensorDataset
 import functions as functions
 
 # UNET --------------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------------
 
 #UNET
 class DoubleConv(nn.Module):
@@ -47,7 +48,6 @@ class UNET(nn.Module):
 
         self.bottleneck = DoubleConv(features[-1], features[-1]*2)
         self.final_conv = nn.Conv2d(features[0], out_channels, kernel_size=1)
-        self.final_normalization = functions.normalize_map        # essential for [0, 1] value spectrum
 
     def forward(self, x):
 
@@ -69,9 +69,8 @@ class UNET(nn.Module):
 
             concat_skip = torch.cat((skip_connection, x), dim=1)
             x = self.ups[idx+1](concat_skip)
-        x = self.final_conv(x)
-        x, _, _ = self.final_normalization(x)
-        return x
+
+        return self.final_conv(x)
 
 # Loss
 def L1L2Loss(pred, target, l1_weight = 1, l2_weight = 1):
@@ -79,8 +78,61 @@ def L1L2Loss(pred, target, l1_weight = 1, l2_weight = 1):
     l2 = nn.MSELoss()
     return l1_weight * l1(pred, target) + l2_weight * l2(pred, target)
 
+# UNET - xavier initialization + sigmoid final layer (for normalization)
+
+class UNET_normalization(nn.Module):
+    def __init__(
+            self, in_channels=1, out_channels=1,  features=[64, 128, 256, 512], 
+    ):
+        super(UNET, self).__init__()
+        self.downs = nn.ModuleList()
+        self.ups = nn.ModuleList()
+        self.pool = nn.MaxPool2d(kernel_size=2, stride =2)
+
+        #Down
+        for feature in features:
+            self.downs.append(DoubleConv(in_channels, feature))
+            in_channels = feature
+
+        #Up
+        for feature in reversed(features):
+            self.ups.append(nn.ConvTranspose2d(feature*2, feature, kernel_size=2, stride=2))
+            self.ups.append(DoubleConv(feature*2, feature))
+
+        self.bottleneck = DoubleConv(features[-1], features[-1]*2)
+        self.final_conv = nn.Conv2d(features[0], out_channels, kernel_size=1)
+        nn.init.xavier_uniform_(self.final_conv.weight, gain=0.1)   
+        nn.init.zeros_(self.final_conv.bias)                        
+        self.final_activation = nn.Sigmoid()
+
+    def forward(self, x):
+
+        skip_connections = []
+        for down in self.downs:
+            x = down(x)
+            skip_connections.append(x)
+            x = self.pool(x)
+
+        x = self.bottleneck(x)
+
+        skip_connections = skip_connections[::-1]
+
+        for idx in range(0, len(self.ups), 2):
+            x = self.ups[idx](x)
+            skip_connection = skip_connections[int(idx/2)]
+
+            ###TODO: resizing to handle wrong image sizes due to flooring in maxpool layer
+
+            concat_skip = torch.cat((skip_connection, x), dim=1)
+            x = self.ups[idx+1](concat_skip)
+        
+        x = self.final_conv(x)
+
+        return self.final_activation(x)
+
     
 # GAN --------------------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------
 
 # Losses
 
