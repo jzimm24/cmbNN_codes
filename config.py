@@ -84,17 +84,17 @@ maps_configs = maps_config()
 class training_config(NamedTuple):
     model: str = "unet"
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    NUM_EPOCHS = 3
+    NUM_EPOCHS = 16
     BATCH_SIZE = 32
     LR = 1e-4
     IMG_DIM = 128
-    DATA_FILE = "../data/realNoise128_10k_2WN_3f_2808.h5"
+    DATA_FILE = "../data/realNoise128_10k_7rc_1WN_3f_2808.h5"
     TRAIN_SPLIT = 1-0.05
-    trained_model_name = "../models/unet_realNoise128_10k_2WN_3f_2808"
+    trained_model_name = "../models/unet_sigmoidNormed1_realNoise128_10k_2WN_3f_2808"
     crit = nn.BCEWithLogitsLoss() 
-    doc_path = "../outputs/docs/gan_realNoise128_10k_7rc_1WN_3f_2808.txt"
+    doc_path = "../outputs/docs/unet_sigmoidNormed1_realNoise128_10k_7rc_1WN_3f_2808.txt"
     visualization = False
-    visualization_file = "../outputs/realNoise128_10k_2WN_3f_2808_postNorm.png"
+    visualization_file = "../outputs/unet_sigmoidNormed1_realNoise128_10k_2WN_3f_2808_postNorm.png"
 
 training_configs = training_config()
 

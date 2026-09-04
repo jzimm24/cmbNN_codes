@@ -344,7 +344,7 @@ def main():
         visualize_data_distr(dataloader, visualization_file, visualization_file[:-4])
 
     if model == "UNET" or model == "unet":
-        unet, unet_optimizer = init_UNET_model()
+        unet, unet_optimizer = init_UNET_model(auto_normalization=True)
         unet.train()
         training_and_saving_UNET_model(unet, unet_optimizer, dataloader)
     elif model == "GAN" or model == "gan":
@@ -358,7 +358,7 @@ def main():
 
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
-    functions.write_doc(run_type="training", doc_path="../outputs/docs/first_doc_test2.txt", runtime=elapsed_time, output_file=trained_model_name)
+    functions.write_doc(run_type="training" runtime=elapsed_time, output_file=trained_model_name)
 
     return None
 

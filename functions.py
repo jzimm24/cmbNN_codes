@@ -47,7 +47,6 @@ def radial_bin_indices(nx, ny):
     return r, max_r
 
 def write_doc(run_type: str,
-              doc_path: str = None,
               runtime = 0, 
               output_file: str = None
               ):
