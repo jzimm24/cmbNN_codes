@@ -253,6 +253,7 @@ save_mode = config.maps_configs.save_mode   # choose 'hdf5' or 'csv'
 flux_mode = config.maps_configs.flux_mode    # 'lin', 'log', or 'gauss' fluxes
 
 # === User‐defined parameters ===
+# preferrably set parameters in config.py
 num_images               = config.maps_configs.num_images      # how many images to generate
 image_size               = config.maps_configs.image_size         # pixels (height=width)
 

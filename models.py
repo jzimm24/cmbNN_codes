@@ -14,6 +14,10 @@ import functions as functions
 
 #UNET
 class DoubleConv(nn.Module):
+    """
+    Double Convolutional layer as main building block of UNET.
+    Convolutional layers are sublimented by BatchNorms and ReLUs.
+    """
     def __init__(self, in_channels, out_channels):
         super(DoubleConv, self).__init__()
         self.conv = nn.Sequential(

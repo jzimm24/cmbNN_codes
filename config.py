@@ -10,43 +10,52 @@ import models as models
 
 # Maps
 
-maps_save_mode = "hdf5"
-maps_flux_mode = "lin"
+######################################
+#outdated??
+######################################
 
-maps_num_images = 10000
-maps_image_size = 128
-maps_max_source_number = 3
+# maps_save_mode = "hdf5"
+# maps_flux_mode = "lin"
 
-maps_seed = 42                   #seed for random value selection
+# maps_num_images = 10000
+# maps_image_size = 128
+# maps_max_source_number = 3
 
-
-maps_rc_mean  = 7.0                       # r_c in the β‐model (pixels)   --> DEFAULT 7 PIXELS
-maps_rc_sigma = 0.0                       # std dev in r_c (in pixels)   --> DEFAULT sigma=2 PIXELS
-
-
-maps_I0_range                 = (0.0, 4.0)    # if I0_fixed is None, draw uniformly/log-uniformly from this
-                                         # (used when flux_mode='lin' or 'log')
-maps_I0_fixed                 = None          # set to a float to force same I0 each time
-maps_I0_mean                  = 1.0           # mean of Gaussian flux prior   (used when flux_mode='gauss')
-maps_I0_sigma                 = 0.3           # std-dev of Gaussian flux prior (used when flux_mode='gauss')
+# maps_seed = 42                   #seed for random value selection
 
 
-maps_white_noise_amplitude    = 1.0        # σ for white Gaussian noise (~2 when with 1/f, ~7 when WN only)
-maps_one_over_f_slope         = 3.0        # power‐law slope (1.5=pink, 3.0=red)
-maps_one_over_f_amplitude     = 1.0        # scaling for 1/f noise (~1 when slope 3.0, ~2 when slope 1.5)
-
-maps_gaussian_smoothing_fwhm  = 1.0        # if >0, smooth final image with this FWHM   --> DEFAULT 5 PIXELS
+# maps_rc_mean  = 7.0                       # r_c in the β‐model (pixels)   --> DEFAULT 7 PIXELS
+# maps_rc_sigma = 0.0                       # std dev in r_c (in pixels)   --> DEFAULT sigma=2 PIXELS
 
 
-maps_output_h5               = '../data/1WN_1A_3S-smooth1_10k128pix_lin04.h5'
+# maps_I0_range                 = (0.0, 4.0)    # if I0_fixed is None, draw uniformly/log-uniformly from this
+#                                          # (used when flux_mode='lin' or 'log')
+# maps_I0_fixed                 = None          # set to a float to force same I0 each time
+# maps_I0_mean                  = 1.0           # mean of Gaussian flux prior   (used when flux_mode='gauss')
+# maps_I0_sigma                 = 0.3           # std-dev of Gaussian flux prior (used when flux_mode='gauss')
+
+
+# maps_white_noise_amplitude    = 1.0        # σ for white Gaussian noise (~2 when with 1/f, ~7 when WN only)
+# maps_one_over_f_slope         = 3.0        # power‐law slope (1.5=pink, 3.0=red)
+# maps_one_over_f_amplitude     = 1.0        # scaling for 1/f noise (~1 when slope 3.0, ~2 when slope 1.5)
+
+# maps_gaussian_smoothing_fwhm  = 1.0        # if >0, smooth final image with this FWHM   --> DEFAULT 5 PIXELS
+
+
+# maps_output_h5               = '../data/1WN_1A_3S-smooth1_10k128pix_lin04.h5'
+
+######################################
+#outdated??
+######################################
 
 class maps_config(NamedTuple):
-    save_mode = "hdf5"
-    flux_mode = "gauss"
+    #class setting all necessary parameters for running maps.py
+    save_mode = "hdf5"      # responsible for data type (choose 'hdf5' or 'csv')
+    flux_mode = "gauss"     # 'lin', 'log', or 'gauss' fluxes
 
-    num_images = 10000
-    image_size = 128
-    max_source_number = 4
+    num_images = 10000      # number of maps created
+    image_size = 128        # size of square map
+    max_source_number = 4   # maximum number of sources (uniform random distr. for all number of sources below max)
 
     seed = 42                   #seed for random value selection
 
@@ -82,19 +91,20 @@ maps_configs = maps_config()
 # Training
 
 class training_config(NamedTuple):
-    model: str = "unet"
-    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    NUM_EPOCHS = 16
-    BATCH_SIZE = 32
-    LR = 1e-4
-    IMG_DIM = 128
-    DATA_FILE = "../data/realNoise128_10k_7rc_1WN_3f_2808.h5"
-    TRAIN_SPLIT = 1-0.05
-    trained_model_name = "../models/unet_sigmoidNormed1_realNoise128_10k_2WN_3f_2808"
-    crit = nn.BCEWithLogitsLoss() 
-    doc_path = "../outputs/docs/unet_sigmoidNormed1_realNoise128_10k_7rc_1WN_3f_2808.txt"
-    visualization = False
-    visualization_file = "../outputs/unet_sigmoidNormed1_realNoise128_10k_2WN_3f_2808_postNorm.png"
+    #class setting all necessary parameters for running training.py
+    model: str = "unet"                                     # model architecture (choose gan or unet) 
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # checks available devices automatically (preferred gpu)
+    NUM_EPOCHS = 16                                         # number of epochs in training
+    BATCH_SIZE = 32                                         # batch size
+    LR = 1e-4                                               # learning rate
+    IMG_DIM = 128                                           # size of maps in data
+    DATA_FILE = "../data/realNoise128_10k_7rc_1WN_3f_2808.h5"   # data file storing images
+    TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
+    trained_model_name = "../models/unet_sigmoidNormed1_realNoise128_10k_2WN_3f_2808"   # name of the trained model
+    crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
+    doc_path = "../outputs/docs/unet_sigmoidNormed1_realNoise128_10k_7rc_1WN_3f_2808.txt"   # path for documentation file of the run
+    visualization = False                                   # should the value distribution of the data + some example maps of the dataset be visualized
+    visualization_file = "../outputs/unet_sigmoidNormed1_realNoise128_10k_2WN_3f_2808_postNorm.png" # path for visualisation diagrams
 
 training_configs = training_config()
 

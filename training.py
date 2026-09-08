@@ -57,39 +57,24 @@ def log_memory_usage():
         print(f"Memry used: CPU")
     return None
 
-# def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
-#     if data_file[-3:] == "npz":
-#         data, sol, paras = functions.load_npz(data_file)
-#         print("Data loading from .npz file")
-#     elif data_file[-2:] == "h5":
-#         data, sol = functions.load_h5py(data_file)
-#         print("Data loading from .h5 file")
-#     else:
-#         raise DataFileFormatError(data_file[-5])
-
-#     n_total = data.shape[0]
-#     print("total images: ", n_total)
-#     n_train = int(TRAIN_SPLIT*n_total)
-#     print("training images: ", n_train)
-
-#     data_img_min = data.min(axis = (1, 2), keepdims = True)
-#     data_img_max = data.max(axis = (1, 2), keepdims = True)
-#     data = (data - data_img_min) / (data_img_max - data_img_min + epsilon)
-
-#     sol_img_min = sol.min(axis = (1, 2), keepdims = True)
-#     sol_img_max = sol.max(axis = (1, 2), keepdims = True)
-#     sol = (sol - sol_img_min) / (sol_img_max - sol_img_min + epsilon)
-
-#     data_train = data[:n_train]
-#     sol_train = sol[:n_train]
-
-#     data_tensor = torch.from_numpy(data_train).float().unsqueeze(1)
-#     sol_tensor = torch.from_numpy(sol_train).float().unsqueeze(1)
-#     dataset = TensorDataset(data_tensor, sol_tensor)
-#     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
-#     return dataloader
-
 def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
+    """
+    Loads data from given Datafile.
+    Prepares the data for training.
+        - normalize data to only include values between [0, 1]
+    Builds dataloader.
+
+    Parameters
+    ----------
+    data_file (str): path to data
+    epsilon(int) : constant needed in normalization to avoid null divisions.
+
+    Returns
+    -------
+    dataloader (dataloader): data ready for training
+    data_denorm_vals (array): array of tuples holding values necessary for denormalizing noisy maps after training
+    sol_denorm_vals (array): array of tuples holding values necessary for denormalizing corresponding ground truth maps after training
+    """
     if data_file[-3:] == "npz":
         data, sol, paras = functions.load_npz(data_file)
         print("Data loading from .npz file")
@@ -122,6 +107,23 @@ def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
     return dataloader, data_denorm_vals, sol_denorm_vals
 
 def visualize_data_distr(data, outputfile, title, bin_width = 0.02, only_first_batch = True, top_bin_focus = False):
+    """
+    Checks value distr. in given dataloader and visualizes the results for quick eye tests before and after training.
+
+    Parameters
+    ----------
+    data_file (dataloader): dataloader 
+    outputfile (str): file where the plotted results should be saved
+    title (str): title of the plot (preferrably run title)
+    bin_width (float): size of bins that store values in the distr.
+    only_first_batch (boolean): Should only data from the first batch be included
+    top_bin_focus (boolean): Should the plot focus on values close to 1
+
+
+    Returns
+    -------
+    None
+    """
     if only_first_batch:
         batch = next(iter(data))
 
@@ -200,6 +202,23 @@ def init_UNET_model(in_chanels: int = 1,
                 device = DEVICE,
                 lr = LR,
                 auto_normalization = True):
+    """
+    Initializes a unet model. The architecture is dependent on the parameters
+
+    Parameters
+    ----------
+    in_chanels (int): number of in_chanels before very first convolutional-layer
+    out_chanel (int): number of chanels returned after the deconder and the very final layer
+    device: device on which training is done
+    lr (float): learning rate
+    auto_normalization (boolean): determines model architecture. If True, Unet_normalization is loaded as the unet model.
+                                    See model.py
+
+    Returns
+    -------
+    unet: initialized unet model
+    unet_optimizer: corresponding optimizer
+    """
     if auto_normalization:
         unet = models.UNET_normalization(in_chanels, out_chanels).to(device)
     else:
@@ -209,8 +228,22 @@ def init_UNET_model(in_chanels: int = 1,
     return unet, unet_optimizer
 
 def training_step_UNET(images, ground_truths, unet, unet_optimizer):
-    # training step (forward and backwards pass of both generator and discriminator as well as parameter optimazation through gradient computation) for
-    # one batch of image pairs in the dataloader
+    """
+    One training step for the unet model consisting of one forward pass through a batch, a subsequent loss
+    calculation and a backwards pass.
+
+    Parameters
+    ----------
+    images (dataloader batch):
+    ground_truths (dataloader batch):
+    unet (model): unet model (should be initialized and in training mode)
+    unet_optimizer ():
+
+    Returns
+    -------
+    loss (float): current loss of the batch
+    optimizer (): current state of the unet optimizer for updating network parameters
+    """
     images = images.to(DEVICE)  # move input to GPU
     ground_truths = ground_truths.to(DEVICE)  # move target to GPU
 
@@ -228,6 +261,23 @@ def training_step_UNET(images, ground_truths, unet, unet_optimizer):
     return loss, unet_optimizer
 
 def training_loop_UNET(unet, unet_optimizer, dataloader, num_epochs = NUM_EPOCHS):
+    """
+    Works though the data for a given number of epochss For doing so, it uses the previously defined training_step_UNET.
+    The losses are only viusally diplayed once each epoch.
+
+    Parameters
+    ----------
+
+    unet (model): unet model (should be initialized and in training mode).
+    unet_optimizer ():
+    dataloader (dataloader batch): data including both the images and their respective ground truth images.
+    num_epochs (int): number of epochs the train should run.
+
+    Returns
+    -------
+    loss (float): current loss of the batch
+    optimizer (): current state of the unet optimizer for updating network parameters
+    """
     for epoch in range(num_epochs):
         print("##############")
         print("Epoch: ", epoch)
@@ -242,6 +292,23 @@ def training_loop_UNET(unet, unet_optimizer, dataloader, num_epochs = NUM_EPOCHS
     return unet, num_epochs, current_loss, current_optimizer
 
 def training_and_saving_UNET_model(unet, unet_optimizer, dataloader, num_epochs = NUM_EPOCHS, path = trained_model_name, prev_epochs = 0):
+    """
+    Executes the previously defined training_loop_UNET and saves the state of the model (both of the generator and the optimizer)
+
+    Parameters
+    ----------
+    unet (model): unet model (should be initialized and in training mode).
+    unet_optimizer ():
+    dataloader (dataloader batch): data including both the images and their respective ground truth images.
+    num_epochs (int): number of epochs the train should run.
+    path (str): filename of where to store the trained model checkpoint
+    prev_epochs(int): number of epochs the previously given UNET Model has already been trained for
+
+    Returns
+    -------
+    loss (float): current loss of the batch
+    optimizer (): current state of the unet optimizer for updating network parameters
+    """
     print("############################")
     print("Training model:")
     print("############################")
@@ -269,6 +336,27 @@ def init_GAN_models(in_chanels_gen: int = 1,
                 img_dim = IMG_DIM,
                 lr_gen = LR,
                 lr_disc = LR):
+    """
+    Initializes a GAN Model. The architecture is dependent on the parameters.
+
+    Parameters
+    ----------
+    in_chanels_gen (int): number of in_chanels before very first convolutional-layer of the UNET generator
+    out_chanel_gen (int): number of chanels returned after the deconder and the very final layer of the unet generator
+    in_chanel_disc (int): chanels the discriminator takes in
+    out_chanels_disc (int): out chanels the discriminator produces
+    device: device on which training is done
+    img_dim (int): pixel size of the squared image
+    lr_gen (float): learning rate of the generator
+    lr_disc(float) learning rate of the discriminator
+
+    Returns
+    -------
+    generator: initialized UNET model as generator
+    generator_optimizer: corresponding optimizer of the UNET
+    discriminator: Discriminnator (simple downsampling model)
+    discriminator_optimizer: Optimizer of the discriminator
+    """
     generator = models.UNET(in_chanels_gen, out_chanels_gen).to(device)
     generator_optimizer = torch.optim.Adam(generator.parameters(), lr=lr_gen)
 
@@ -279,8 +367,26 @@ def init_GAN_models(in_chanels_gen: int = 1,
     return generator, generator_optimizer, discriminator, discriminator_optimizer
 
 def training_step_GAN(images, ground_truths, generator, gen_optimizer, discriminator, disc_optimizer):
-    # training step (forward and backwards pass of both generator and discriminator as well as parameter optimazation through gradient computation) for
-    # one batch of image pairs in the dataloader
+    """
+    One training step for the Gan model consisting of one forward pass through a batch for the generator and discriminator respectively.
+    A subsequent loss calculation for both and a backwards pass using both losses in the generator updates. 
+
+    Parameters
+    ----------
+    images (dataloader batch):
+    ground_truths (dataloader batch):
+    generator (model): generator model (unet)
+    gen_optimizer ():
+    discriminator ():
+    disc_optimizer ():
+
+    Returns
+    -------
+    gen_loss (float): current loss of the generator for this batch
+    disc_loss (float): current loss of the discriminator for this batch
+    gen_optimizer (): current state of the optimizer for the generator for updating network parameters
+    disc_optimizer (): current state of the optimizer for the discriminator for updating network parameters
+    """
     images = images.to(DEVICE)  # move input to GPU
     ground_truths = ground_truths.to(DEVICE)  # move target to GPU
 
@@ -305,6 +411,23 @@ def training_step_GAN(images, ground_truths, generator, gen_optimizer, discrimin
     return gen_loss, disc_loss, gen_optimizer, disc_optimizer
 
 def training_loop_GAN(generator, gen_optimizer, discriminator, disc_optimizer, dataloader, num_epochs = NUM_EPOCHS):
+    """
+    Works though the data for a given number of epochss For doing so, it uses the previously defined training_step_UNET.
+    The losses are only viusally diplayed once each epoch.
+
+    Parameters
+    ----------
+
+    unet (model): unet model (should be initialized and in training mode).
+    unet_optimizer ():
+    dataloader (dataloader batch): data including both the images and their respective ground truth images.
+    num_epochs (int): number of epochs the train should run.
+
+    Returns
+    -------
+    loss (float): current loss of the batch
+    optimizer (): current state of the unet optimizer for updating network parameters
+    """
     for epoch in range(num_epochs):
         for x, y in dataloader:
             current_gen_loss, current_disc_loss, current_gen_optimizer, current_disc_optimizer = training_step_GAN(x, y, generator, gen_optimizer, discriminator, disc_optimizer)
