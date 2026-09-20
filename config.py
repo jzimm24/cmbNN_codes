@@ -119,7 +119,9 @@ class eval_config(NamedTuple):
     modelArchitecture = "UNET"
     MODEL_FILE = "../models/unet_realNoise128_10k_2WN_3f_2808_epoch_3.pth"       # has to be manually inserted because of added epoch info in model save state
     DATA_FILE = "../data/realNoise128_10k_2WN_3f_2808.h5"
-    OUTPUT_FILE = "unet_realNoise128_10k_7rc_3f_2808_eval_normalized.png"
+    BASE_NAME = "unet_realNoise128_10k_7rc_3f_2808_eval_normalized"
+    OUTPUT_FILE = f"../outputs/{BASE_NAME}.png"
+    EVAL_FILE = f"../outputs/{BASE_NAME}.txt"
 
     EVAL_SPLIT = 1 - training_configs.TRAIN_SPLIT
     BATCH_SIZE = 32

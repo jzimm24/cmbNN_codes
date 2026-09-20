@@ -32,6 +32,7 @@ IMG_SIZE = config.evaluation_configs.IMG_SIZE
 MAX_VAL = config.evaluation_configs.MAX_VAL                     # for psnr
 DATA_RANGE = config.evaluation_configs.DATA_RANGE
 
+EVAL_FILE = config.evaluation_configs.EVAL_FILE
 TITLE = config.evaluation_configs.TITLE
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -68,41 +69,57 @@ def load_model(path: str = MODEL_FILE, device: str = DEVICE):
 
     return model
 
-def load_random_sample(path: str, seed = 42, epsilon = 1e-8):       #TODO: load random sample from part of the dataloader that was saved for evaluation
-    np.random.seed(seed)
-    if path[-3:] == ".h5":
-        with h5py.File(path, "r") as f:
-            dataset = f["noisy"]
-            num_maps = dataset.shape[0]
-            idx = np.random.randint(0, num_maps)
-            print(f"Randomly chosen index: {idx}.")
-            sample_noisy = dataset[idx]
+# def load_random_sample(path: str, seed = 42, epsilon = 1e-8):       #TODO: load random sample from part of the dataloader that was saved for evaluation
+#     np.random.seed(seed)
+#     if path[-3:] == ".h5":
+#         with h5py.File(path, "r") as f:
+#             dataset = f["noisy"]
+#             num_maps = dataset.shape[0]
+#             idx = np.random.randint(0, num_maps)
+#             print(f"Randomly chosen index: {idx}.")
+#             sample_noisy = dataset[idx]
 
-            dataset_clean = f["clean"]
-            sample_clean = dataset_clean[idx]
+#             dataset_clean = f["clean"]
+#             sample_clean = dataset_clean[idx]
 
-            print(f"Sample [{idx}] loaded.")
-    elif path[-3:] == "npz":
-        dataset_noisy, dataset_clean, _ = functions.load_npz(path=path)
-        num_maps = dataset_noisy.shape[0]
-        idx = np.random.randint(0, num_maps)
-        print(f"Randomly chosen index: {idx}.")
+#             print(f"Sample [{idx}] loaded.")
+#     elif path[-3:] == "npz":
+#         dataset_noisy, dataset_clean, _ = functions.load_npz(path=path)
+#         num_maps = dataset_noisy.shape[0]
+#         idx = np.random.randint(0, num_maps)
+#         print(f"Randomly chosen index: {idx}.")
 
-        sample_noisy = dataset_noisy[idx]
-        sample_clean = dataset_clean[idx]
-        print(f"Sample [{idx}] loaded.")
+#         sample_noisy = dataset_noisy[idx]
+#         sample_clean = dataset_clean[idx]
+#         print(f"Sample [{idx}] loaded.")
 
-    else:
-        raise UnknownFileStructureError(path[-7:])
+#     else:
+#         raise UnknownFileStructureError(path[-7:])
     
-    print("#################")
-    print(sample_noisy.shape)
-    sample_noisy_normalized, _, _ = functions.normalize_map(sample_noisy, epsilon)
-    sample_clean_normalized, _, _ = functions.normalize_map(sample_clean, epsilon)
+#     print("#################")
+#     print(sample_noisy.shape)
+#     sample_noisy_normalized, _, _ = functions.normalize_map(sample_noisy, epsilon)
+#     sample_clean_normalized, _, _ = functions.normalize_map(sample_clean, epsilon)
 
-    tensor_noisy = torch.from_numpy(sample_noisy_normalized).float().unsqueeze(0).unsqueeze(0)
-    tensor_clean = torch.from_numpy(sample_clean_normalized).float().unsqueeze(0).unsqueeze(0)
-    return tensor_noisy, tensor_clean
+#     tensor_noisy = torch.from_numpy(sample_noisy_normalized).float().unsqueeze(0).unsqueeze(0)
+#     tensor_clean = torch.from_numpy(sample_clean_normalized).float().unsqueeze(0).unsqueeze(0)
+#     return tensor_noisy, tensor_clean
+
+def load_random_sample(path: str, seed=42, epsilon=1e-8):
+    dataloader, data_paras, sol_paras = load_and_prep_eval_data(path, epsilon)
+
+    dataset = dataloader.dataset          # TensorDataset of (noisy, clean) pairs
+    n_pairs = len(dataset)
+
+    rng = np.random.default_rng(seed)
+    idx = int(rng.integers(0, n_pairs))
+    print(f"Randomly chosen index (within eval split): {idx} of {n_pairs}.")
+
+    tensor_noisy, tensor_clean = dataset[idx]   # each has shape (1, H, W)
+    print(f"Sample shape: {tuple(tensor_noisy.shape)}")
+
+    # add batch dimension -> (1, 1, H, W), same as the old function returned
+    return tensor_noisy.unsqueeze(0), tensor_clean.unsqueeze(0)
 
 def example_forward_pass(model, sample = None, path = DATA_FILE):
     if sample is None:
@@ -384,34 +401,90 @@ def cross_correlation_coefficient(groundtruth_img, pred_img):
 
     return k_bins, r_k
 
-def main():
+def _summary_lines(name, values, fmt):
+    return [
+        f"{name} max: {max(values):{fmt}}",
+        f"{name} min: {min(values):{fmt}}",
+        f"{name} avg: {np.mean(values):{fmt}}",
+        "",
+    ]
 
+
+def write_eval_results(eval_file = EVAL_FILE, total_mse=None, mse_list=None,
+                       psnr_list=None, ssim_list=None):
+    # metric name -> (per-image values, number format); skip metrics that were not computed
+    per_image = {
+        name: (vals, fmt)
+        for name, vals, fmt in [
+            ("MSE", mse_list, ".6e"),
+            ("PSNR", psnr_list, ".4f"),
+            ("SSIM", ssim_list, ".4f"),
+        ]
+        if vals is not None
+    }
+
+    lengths = {name: len(vals) for name, (vals, _) in per_image.items()}
+    if len(set(lengths.values())) > 1:
+        print(f"WARNING: metric lists have different lengths: {lengths}")
+
+    with open(eval_file, "w") as f:
+        f.write("=== Evaluation summary ===\n")
+        f.write(f"Model file: {MODEL_FILE}\n")
+        f.write(f"Data file:  {DATA_FILE}\n")
+        if per_image:
+            n_images = min(lengths.values())
+            f.write(f"Number of eval images: {n_images}\n")
+        f.write(f"Metrics computed: {', '.join(per_image) if per_image else 'none'}\n\n")
+
+        if total_mse is not None:
+            f.write(f"MSE total: {total_mse:.6e}\n")
+        for name, (vals, fmt) in per_image.items():
+            f.write("\n".join(_summary_lines(name, vals, fmt)) + "\n")
+
+        if per_image:
+            f.write("=== Per-image results ===\n")
+            f.write("index\t" + "\t".join(per_image) + "\n")
+            n = min(lengths.values())
+            for i in range(n):
+                row = [f"{vals[i]:{fmt}}" for vals, fmt in per_image.values()]
+                f.write(f"{i}\t" + "\t".join(row) + "\n")
+
+
+def main():
     start_time = time.perf_counter()
 
     model = load_model()
     model.eval()
-    noisy, clean = load_random_sample(DATA_FILE)
-    noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
-    make_figures([noisy, prediction, clean])
-    
-    # total_mse, mse_list = eval_MSE(model_file=MODEL_FILE, data_file=DATA_FILE)
-    # print("Total MSE: ", total_mse)
-    # print("Max MSE: ", max(mse_list))
-    # print("#########################################################")
-    
-    # psnr_list = eval_PSNR(model_file="../models/0507_unetTest_noWN_A7_epoch_1.pth", data_file="../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
-    # print("PSNR Max: ", max(psnr_list))
-    # print("PSNR Min: ", min(psnr_list))
-    
-    # ssim_list = eval_ssim(model_file="../models/0507_unetTest_noWN_A7_epoch_1.pth", data_file="../data/noWN_A7_1F-unsmooth_5k128pix_lin04.h5")
-    # print("SSIM Max: ", max(ssim_list))
-    # print("SSIM Min: ", min(ssim_list))
-    # print("SSIM Avg: ", np.mean(ssim_list))
-    # return None
+
+    data, _, _ = load_and_prep_eval_data(DATA_FILE)
+
+    # noisy, clean = load_random_sample(DATA_FILE)
+    # noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
+    # make_figures([noisy, prediction, clean])
+
+
+    total_mse = mse_list = psnr_list = ssim_list = None
+
+    total_mse, mse_list = eval_MSE(model=model, data = data)
+    psnr_list = eval_PSNR(model=model, data = data)
+    ssim_list = eval_ssim(model=model, data = data)
+
+    if mse_list is not None:
+        print("Total MSE: ", total_mse, " Max MSE: ", max(mse_list))
+    if psnr_list is not None:
+        print("PSNR Max: ", max(psnr_list), " Min: ", min(psnr_list))
+    if ssim_list is not None:
+        print("SSIM Max: ", max(ssim_list), " Min: ", min(ssim_list),
+              " Avg: ", np.mean(ssim_list))
+
+    write_eval_results(EVAL_FILE, total_mse=total_mse, mse_list=mse_list,
+                   psnr_list=psnr_list, ssim_list=ssim_list)
 
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
-    functions.write_doc("evaluation", "../outputs/docs/first_doc_test4.txt", runtime=elapsed_time, output_file=OUTPUT_FILE)
+    functions.write_doc("evaluation",
+                        runtime=elapsed_time, output_file=OUTPUT_FILE)
+    return None
 
 if __name__ == "__main__":
     print("Executing main() in eval.py")
