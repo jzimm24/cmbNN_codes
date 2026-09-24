@@ -80,9 +80,9 @@ class maps_config(NamedTuple):
 
     output_h5               = '../data/realNoise128_10k_2WN_3f_2808.h5'
 
-    doc_path = "../outputs/docs/realNoise128_10k_7rc_1WN_3f_2808_doc.txt"
+    doc_path = "../outputs/docs/100_128_single_centered_circle_varyingSize_maps.txt"
 
-    visualization_path = "../outputs/realNoise128_10k_7rc_1WN_3f_2808_preNorm.png"
+    visualization_path = "../outputs/100_128_single_centered_circle_varyingSize_maps.png"
 
 maps_configs = maps_config()
 
@@ -92,19 +92,19 @@ maps_configs = maps_config()
 
 class training_config(NamedTuple):
     #class setting all necessary parameters for running training.py
-    model: str = "unet"                                     # model architecture (choose gan or unet) 
+    model: str = "resnet"                                     # model architecture (choose gan or unet) 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # checks available devices automatically (preferred gpu)
-    NUM_EPOCHS = 16                                         # number of epochs in training
-    BATCH_SIZE = 32                                         # batch size
-    LR = 1e-4                                               # learning rate
+    NUM_EPOCHS = 4                                         # number of epochs in training
+    BATCH_SIZE = 8                                         # batch size
+    LR = 1e-2                                               # learning rate
     IMG_DIM = 128                                           # size of maps in data
-    DATA_FILE = "../data/realNoise128_10k_7rc_1WN_3f_2808.h5"   # data file storing images
+    DATA_FILE = "../data/100_128_single_centered_circle_maps.npz"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
-    trained_model_name = "../models/unet_sigmoidNormed1_realNoise128_10k_2WN_3f_2808"   # name of the trained model
+    trained_model_name = "../models/resUNET100_128_single_centered_circle_maps"   # name of the trained model
     crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
-    doc_path = "../outputs/docs/unet_sigmoidNormed1_realNoise128_10k_7rc_1WN_3f_2808.txt"   # path for documentation file of the run
-    visualization = False                                   # should the value distribution of the data + some example maps of the dataset be visualized
-    visualization_file = "../outputs/unet_sigmoidNormed1_realNoise128_10k_2WN_3f_2808_postNorm.png" # path for visualisation diagrams
+    doc_path = "../outputs/docs/training_resUNET100_128_single_centered_circle_maps.txt"   # path for documentation file of the run
+    visualization = True                                   # should the value distribution of the data + some example maps of the dataset be visualized
+    visualization_file = "../outputs/resUNET100_128_single_centered_circle_maps.png" # path for visualisation diagrams
 
 training_configs = training_config()
 

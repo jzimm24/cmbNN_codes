@@ -134,7 +134,88 @@ class UNET_normalization(nn.Module):
 
         return self.final_activation(x)
 
+# ResNet --------------------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------
+
+class ResBlock(nn.Module):
+    """
+    Double convolutional block. The output of the
+    """
+    def __init__(self, in_channels, out_channels):
+        super(ResBlock, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels)
+        )
+        self.relu = nn.ReLU(inplace=True)
+
+        if in_channels != out_channels:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, bias=False),
+                nn.BatchNorm2d(out_channels)
+            )
+        else:
+            self.shortcut = nn.Identity()
+
+    def forward(self, x):
+        identity = self.shortcut(x)
+        out = self.conv(x)
+        return self.relu(out+identity)
     
+def make_res_stage(in_channels, out_channels, num_blocks):
+    layers = [ResBlock(in_channels, out_channels)]
+    for _ in range(num_blocks - 1):
+        layers.append(ResBlock(out_channels, out_channels))
+    return nn.Sequential(*layers)
+    
+class ResUNET(nn.Module):
+    #def __init__(self, in_channels=1, out_channels=1, features = [64, 128, 256, 512, 1024], blocks_per_level = 2):
+    def __init__(self, in_channels=1, out_channels=1, features = [64, 128, 256, 512], blocks_per_level = 2):
+        super(ResUNET, self).__init__()
+        self.downs = nn.ModuleList()
+        self.ups = nn.ModuleList()
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        # Down
+        for feature in features:
+            self.downs.append(make_res_stage(in_channels, feature, blocks_per_level))
+            in_channels = feature
+
+        # Up
+
+        for feature in reversed(features):
+            self.ups.append(nn.ConvTranspose2d(feature*2, feature, kernel_size=2, stride=2))
+            self.ups.append(make_res_stage(feature*2, feature, blocks_per_level))
+
+        self.bottleneck = make_res_stage(features[-1], features[-1] * 2, blocks_per_level)
+        self.final_conv = nn.Conv2d(features[0], out_channels, kernel_size=1)
+
+    def forward(self, x):
+        skip_connections = []
+        for down in self.downs:
+            x = down(x)
+            skip_connections.append(x)
+            x = self.pool(x)
+
+        x = self.bottleneck(x)
+        skip_connections = skip_connections[::-1]
+        for idx in range(0, len(self.ups), 2):
+            x = self.ups[idx](x)
+            skip_connection = skip_connections[idx // 2]
+
+            if x.shape[2:] != skip_connection.shape[2:]:
+                x = F.interpolate(x, size=skip_connection.shape[2:])
+
+            concat_skip = torch.cat((skip_connection, x), dim=1)
+            x = self.ups[idx+1](concat_skip)
+    
+        return self.final_conv(x)
+
+
+
 # GAN --------------------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------------------------------
 

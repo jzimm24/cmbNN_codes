@@ -324,6 +324,97 @@ def training_and_saving_UNET_model(unet, unet_optimizer, dataloader, num_epochs 
     print("Saved")
     return None
 
+# ResUNET--------------------------------------------------------------------------------------------------------------------------------------
+
+def init_ResUNET_model(in_chanels: int = 1,
+                out_chanels: int = 1,
+                device = DEVICE,
+                lr = LR):
+    """
+    Initializes a ResUNET model.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    """
+    resUNET = models.ResUNET(in_chanels, out_chanels).to(device)
+    resUNET_optimizer = torch.optim.Adam(resUNET.parameters(), lr=lr)
+
+    return resUNET, resUNET_optimizer
+
+def training_step_resUNET(images, ground_truths, resUNET, resUNET_optimizer):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    """
+    images = images.to(DEVICE)  # move input to GPU
+    ground_truths = ground_truths.to(DEVICE)  # move target to GPU
+
+    # generator Forward
+    preds = resUNET(images)
+
+    # losses
+    loss = crit(preds, ground_truths)
+
+    # backwards
+    resUNET_optimizer.zero_grad()
+    loss.backward()
+    resUNET_optimizer.step()
+
+    return loss, resUNET_optimizer
+
+def training_loop_resUNET(resUNET, resUNET_optimizer, dataloader, num_epochs = NUM_EPOCHS):
+    """
+
+    Parameters
+    ----------
+
+
+    Returns
+    -------
+    """
+    for epoch in range(num_epochs):
+        print("##############")
+        print("Epoch: ", epoch)
+        print("##############")
+        running_loss = 0
+        for x, y in dataloader:
+            current_loss, current_optimizer = training_step_resUNET(x, y, resUNET, resUNET_optimizer)
+            running_loss += current_loss.item()
+        print("Loss: ", running_loss/len(dataloader))
+
+    return resUNET, num_epochs, current_loss, current_optimizer
+
+def training_and_saving_resUNET_model(resUNET, resUNET_optimizer, dataloader, num_epochs = NUM_EPOCHS, path = trained_model_name, prev_epochs = 0):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    """
+    print("############################")
+    print("Training model:")
+    print("############################")
+    resUNET, num_epochs, current_loss, current_optimizer = training_loop_UNET(resUNET, resUNET_optimizer, dataloader, num_epochs)
+    checkpoint = {
+    "epoch": num_epochs,
+    "generator_state_dict": resUNET.state_dict(),
+    "optimizer_state_dict": current_optimizer.state_dict(),
+    "loss": current_loss
+}
+    print("Saving model at: ", path)
+    torch.save(checkpoint, f"{path}_epoch_{num_epochs+prev_epochs}.pth")
+    print("Saved")
+    return None
+
 
 
 # GAN --------------------------------------------------------------------------------------------------------------------------------------
@@ -470,6 +561,10 @@ def main():
         unet, unet_optimizer = init_UNET_model(auto_normalization=True)
         unet.train()
         training_and_saving_UNET_model(unet, unet_optimizer, dataloader)
+    elif model == "resnet" or model == "ResNET" or model == "resunet" or model == "ResUNET":
+        resunet, resunet_optimizer = init_ResUNET_model()
+        resunet.train()
+        training_and_saving_resUNET_model(resunet, resunet_optimizer, dataloader=dataloader)
     elif model == "GAN" or model == "gan":
         generator, generator_optimizer, discriminator, discriminator_optimizer = init_GAN_models()
         generator.train()
