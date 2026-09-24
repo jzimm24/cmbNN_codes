@@ -172,8 +172,7 @@ def make_res_stage(in_channels, out_channels, num_blocks):
     return nn.Sequential(*layers)
     
 class ResUNET(nn.Module):
-    #def __init__(self, in_channels=1, out_channels=1, features = [64, 128, 256, 512, 1024], blocks_per_level = 2):
-    def __init__(self, in_channels=1, out_channels=1, features = [64, 128, 256, 512], blocks_per_level = 2):
+    def __init__(self, in_channels=1, out_channels=1, features = [64, 128, 256, 512, 1024], blocks_per_level = 4):
         super(ResUNET, self).__init__()
         self.downs = nn.ModuleList()
         self.ups = nn.ModuleList()

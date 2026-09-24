@@ -94,17 +94,17 @@ class training_config(NamedTuple):
     #class setting all necessary parameters for running training.py
     model: str = "resnet"                                     # model architecture (choose gan or unet) 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # checks available devices automatically (preferred gpu)
-    NUM_EPOCHS = 4                                         # number of epochs in training
-    BATCH_SIZE = 8                                         # batch size
+    NUM_EPOCHS = 32                                         # number of epochs in training
+    BATCH_SIZE = 16                                         # batch size
     LR = 1e-2                                               # learning rate
     IMG_DIM = 128                                           # size of maps in data
-    DATA_FILE = "../data/100_128_single_centered_circle_maps.npz"   # data file storing images
+    DATA_FILE = "../data/realNoise128_10k_7rc_1WN_3f_2808.h5"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
-    trained_model_name = "../models/resUNET100_128_single_centered_circle_maps"   # name of the trained model
+    trained_model_name = "../models/resUNET_realNoise128_10k_7rc_1WN_3f_2808"   # name of the trained model
     crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
-    doc_path = "../outputs/docs/training_resUNET100_128_single_centered_circle_maps.txt"   # path for documentation file of the run
+    doc_path = "../outputs/docs/training_resUNET_realNoise128_10k_7rc_1WN_3f_2808.txt"   # path for documentation file of the run
     visualization = True                                   # should the value distribution of the data + some example maps of the dataset be visualized
-    visualization_file = "../outputs/resUNET100_128_single_centered_circle_maps.png" # path for visualisation diagrams
+    visualization_file = "../outputs/resUNET_realNoise128_10k_7rc_1WN_3f_2808.png" # path for visualisation diagrams
 
 training_configs = training_config()
 
