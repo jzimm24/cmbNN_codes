@@ -116,10 +116,10 @@ class eval_config(NamedTuple):
 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-    modelArchitecture = "GAN"
-    MODEL_FILE = "../models/gan_realNoise128_10k_7rc_1WN_3f_2808_epoch_16.pth"       # has to be manually inserted because of added epoch info in model save state
-    DATA_FILE = "../data/realNoise128_10k_7rc_1WN_3f_2808.h5"
-    BASE_NAME = "gan_realNoise128_10k_7rc_1WN_3f_2808_epoch_16"
+    modelArchitecture = "UNET"
+    MODEL_FILE = "../models/UNET_lr0001_bs16_realNoise128_10k_1WN_1f_3s_size30_2409_epoch_4.pth"       # has to be manually inserted because of added epoch info in model save state
+    DATA_FILE = "../data/realNoise128_10k_1WN_1f_3s_size30_2409.h5"
+    BASE_NAME = "UNET_lr0001_bs16_realNoise128_10k_1WN_1f_3s_size30_2409_epoch_4"
     OUTPUT_FILE = f"../outputs/{BASE_NAME}.png"
     EVAL_FILE = f"../outputs/{BASE_NAME}.txt"
 
@@ -133,6 +133,6 @@ class eval_config(NamedTuple):
 
     TITLE = OUTPUT_FILE
 
-    doc_path = "../outputs/docs/gan_realNoise128_10k_7rc_1WN_3f_2808_epoch_16.txt"
+    doc_path = "../outputs/docs/UNET_lr0001_bs16_realNoise128_10k_1WN_1f_3s_size30_2409_epoch_4.txt"
 
 evaluation_configs = eval_config()

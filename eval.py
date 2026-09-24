@@ -341,7 +341,7 @@ def eval_power_spectrum(model = None, data = None, model_path = None, data_file 
     power_preds = []
     with torch.no_grad():
         for x, y in dataloader:
-            noisy_batch = noisy_batch.to(device, non_blocking=True)
+            noisy_batch = x.to(device, non_blocking=True)
             preds = model(noisy_batch)
             preds_np = preds.cpu().numpy()
 
@@ -354,15 +354,11 @@ def eval_power_spectrum(model = None, data = None, model_path = None, data_file 
 
                 with np.errstate(divide="ignore", invalid="ignore"):
                     current_residual = (current_power_pred - current_power_groundtruth) / current_power_groundtruth
-                current_residual = np.where(np.isfinite(current_residual, current_residual, np.nan))
+                current_residual = np.where(np.isfinite(current_residual), current_residual, np.nan)
 
                 residuals.append(current_residual)
                 power_groundtruths.append(current_power_groundtruth)
                 power_preds.append(current_power_pred)
-
-    residuals.append(current_residual)
-    power_groundtruths.append(current_power_groundtruth)
-    power_preds.append(current_power_pred)
 
     return k_bins, residuals, power_preds, power_groundtruths
 
@@ -401,24 +397,175 @@ def cross_correlation_coefficient(groundtruth_img, pred_img):
 
     return k_bins, r_k
 
+def eval_cross_correlation(model=None, data=None, model_path=None, data_file=None,
+                            batch_size=BATCH_SIZE, device=DEVICE, img_size=IMG_SIZE):
+
+    if model is None:
+        if model_path is None:
+            raise ModelAccessibilityError()
+        else:
+            model = load_model(model_path, device)
+    if data is None:
+        if data_file is None:
+            raise DataAccessibilityError()
+        else:
+            dataloader, _, _ = load_and_prep_eval_data(data_file)
+    else:
+        dataloader = data
+
+    r_k_list = []
+    k_bins = None
+
+    with torch.no_grad():
+        for x, y in dataloader:
+            noisy_batch = x.to(device, non_blocking=True)
+            preds = model(noisy_batch)
+            preds_np = preds.cpu().numpy()
+            y_np = y.numpy()
+
+            for i in range(preds_np.shape[0]):
+                pred_img = preds_np[i, 0]
+                groundtruth_img = y_np[i, 0]
+
+                current_k_bins, current_r_k = cross_correlation_coefficient(groundtruth_img, pred_img)
+                if k_bins is None:
+                    k_bins = current_k_bins
+
+                r_k_list.append(current_r_k)
+
+    return k_bins, r_k_list
+
+# def _summary_lines(name, values, fmt):
+#     return [
+#         f"{name} max: {max(values):{fmt}}",
+#         f"{name} min: {min(values):{fmt}}",
+#         f"{name} avg: {np.mean(values):{fmt}}",
+#         "",
+#     ]
+
+
+# def write_eval_results(eval_file = EVAL_FILE, total_mse=None, mse_list=None,
+#                        psnr_list=None, ssim_list=None):
+#     # metric name -> (per-image values, number format); skip metrics that were not computed
+#     per_image = {
+#         name: (vals, fmt)
+#         for name, vals, fmt in [
+#             ("MSE", mse_list, ".6e"),
+#             ("PSNR", psnr_list, ".4f"),
+#             ("SSIM", ssim_list, ".4f"),
+#         ]
+#         if vals is not None
+#     }
+
+#     lengths = {name: len(vals) for name, (vals, _) in per_image.items()}
+#     if len(set(lengths.values())) > 1:
+#         print(f"WARNING: metric lists have different lengths: {lengths}")
+
+#     with open(eval_file, "w") as f:
+#         f.write("=== Evaluation summary ===\n")
+#         f.write(f"Model file: {MODEL_FILE}\n")
+#         f.write(f"Data file:  {DATA_FILE}\n")
+#         if per_image:
+#             n_images = min(lengths.values())
+#             f.write(f"Number of eval images: {n_images}\n")
+#         f.write(f"Metrics computed: {', '.join(per_image) if per_image else 'none'}\n\n")
+
+#         if total_mse is not None:
+#             f.write(f"MSE total: {total_mse:.6e}\n")
+#         for name, (vals, fmt) in per_image.items():
+#             f.write("\n".join(_summary_lines(name, vals, fmt)) + "\n")
+
+#         if per_image:
+#             f.write("=== Per-image results ===\n")
+#             f.write("index\t" + "\t".join(per_image) + "\n")
+#             n = min(lengths.values())
+#             for i in range(n):
+#                 row = [f"{vals[i]:{fmt}}" for vals, fmt in per_image.values()]
+#                 f.write(f"{i}\t" + "\t".join(row) + "\n")
+
+
+# def main():
+#     start_time = time.perf_counter()
+
+#     model = load_model()
+#     model.eval()
+
+#     data, _, _ = load_and_prep_eval_data(DATA_FILE)
+
+#     # noisy, clean = load_random_sample(DATA_FILE)
+#     # noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
+#     # make_figures([noisy, prediction, clean])
+
+
+#     total_mse = mse_list = psnr_list = ssim_list = None
+
+#     total_mse, mse_list = eval_MSE(model=model, data = data)
+#     psnr_list = eval_PSNR(model=model, data = data)
+#     ssim_list = eval_ssim(model=model, data = data)
+
+#     if mse_list is not None:
+#         print("Total MSE: ", total_mse, " Max MSE: ", max(mse_list))
+#     if psnr_list is not None:
+#         print("PSNR Max: ", max(psnr_list), " Min: ", min(psnr_list))
+#     if ssim_list is not None:
+#         print("SSIM Max: ", max(ssim_list), " Min: ", min(ssim_list),
+#               " Avg: ", np.mean(ssim_list))
+
+#     write_eval_results(EVAL_FILE, total_mse=total_mse, mse_list=mse_list,
+#                    psnr_list=psnr_list, ssim_list=ssim_list)
+
+#     end_time = time.perf_counter()
+#     elapsed_time = end_time - start_time
+#     functions.write_doc("evaluation",
+#                         runtime=elapsed_time, output_file=OUTPUT_FILE)
+#     return None
+
 def _summary_lines(name, values, fmt):
     return [
-        f"{name} max: {max(values):{fmt}}",
-        f"{name} min: {min(values):{fmt}}",
-        f"{name} avg: {np.mean(values):{fmt}}",
+        f"{name} max: {np.nanmax(values):{fmt}}",
+        f"{name} min: {np.nanmin(values):{fmt}}",
+        f"{name} avg: {np.nanmean(values):{fmt}}",
+        f"{name} n_nan: {np.sum(np.isnan(values))}",
         "",
     ]
 
 
-def write_eval_results(eval_file = EVAL_FILE, total_mse=None, mse_list=None,
-                       psnr_list=None, ssim_list=None):
-    # metric name -> (per-image values, number format); skip metrics that were not computed
+def _radial_profile_lines(name, k_bins, stacked_values):
+    # stacked_values: shape (n_images, n_k) -- average over images, ignoring nans
+    mean_profile = np.nanmean(stacked_values, axis=0)
+    lines = [f"=== {name} radial profile (mean over images) ==="]
+    lines.append("k\tvalue")
+    for k, v in zip(k_bins, mean_profile):
+        lines.append(f"{k}\t{v:.6e}")
+    lines.append("")
+    return lines
+
+
+def write_eval_results(eval_file=EVAL_FILE, total_mse=None, mse_list=None,
+                        psnr_list=None, ssim_list=None,
+                        power_spectrum_result=None, cross_corr_result=None):
+    # power_spectrum_result: (k_bins, residuals, power_preds, power_groundtruths) or None
+    # cross_corr_result: (k_bins, r_k_list) or None -- r_k_list is a list of per-image r_k arrays
+
+    # scalar-per-image summaries derived from the radial arrays, so they can
+    # sit in the same per-image table as MSE/PSNR/SSIM
+    ps_scalar = None
+    cc_scalar = None
+    if power_spectrum_result is not None:
+        _, residuals, _, _ = power_spectrum_result
+        ps_scalar = [np.nanmean(np.abs(r)) for r in residuals]
+    if cross_corr_result is not None:
+        _, r_k_list = cross_corr_result
+        cc_scalar = [np.nanmean(r) for r in r_k_list]
+
     per_image = {
         name: (vals, fmt)
         for name, vals, fmt in [
             ("MSE", mse_list, ".6e"),
             ("PSNR", psnr_list, ".4f"),
             ("SSIM", ssim_list, ".4f"),
+            ("PS_resid_meanabs", ps_scalar, ".4e"),
+            ("CrossCorr_mean", cc_scalar, ".4f"),
         ]
         if vals is not None
     }
@@ -434,7 +581,7 @@ def write_eval_results(eval_file = EVAL_FILE, total_mse=None, mse_list=None,
         if per_image:
             n_images = min(lengths.values())
             f.write(f"Number of eval images: {n_images}\n")
-        f.write(f"Metrics computed: {', '.join(per_image) if per_image else 'none'}\n\n")
+            f.write(f"Metrics computed: {', '.join(per_image)}\n\n")
 
         if total_mse is not None:
             f.write(f"MSE total: {total_mse:.6e}\n")
@@ -448,6 +595,17 @@ def write_eval_results(eval_file = EVAL_FILE, total_mse=None, mse_list=None,
             for i in range(n):
                 row = [f"{vals[i]:{fmt}}" for vals, fmt in per_image.values()]
                 f.write(f"{i}\t" + "\t".join(row) + "\n")
+            f.write("\n")
+
+        # radial profiles get their own section since they're arrays, not scalars
+        if power_spectrum_result is not None:
+            k_bins, residuals, power_preds, power_groundtruths = power_spectrum_result
+            f.write("".join(l + "\n" for l in _radial_profile_lines(
+                "Power spectrum residual", k_bins, np.array(residuals))))
+        if cross_corr_result is not None:
+            k_bins, r_k_list = cross_corr_result
+            f.write("".join(l + "\n" for l in _radial_profile_lines(
+                "Cross-correlation", k_bins, np.array(r_k_list))))
 
 
 def main():
@@ -458,16 +616,19 @@ def main():
 
     data, _, _ = load_and_prep_eval_data(DATA_FILE)
 
-    # noisy, clean = load_random_sample(DATA_FILE)
-    # noisy, prediction, clean = example_forward_pass(model, [noisy, clean])
-    # make_figures([noisy, prediction, clean])
-
-
     total_mse = mse_list = psnr_list = ssim_list = None
 
-    total_mse, mse_list = eval_MSE(model=model, data = data)
-    psnr_list = eval_PSNR(model=model, data = data)
-    ssim_list = eval_ssim(model=model, data = data)
+    total_mse, mse_list = eval_MSE(model=model, data=data)
+    psnr_list = eval_PSNR(model=model, data=data)
+    ssim_list = eval_ssim(model=model, data=data)
+
+    k_bins_ps, residuals, power_preds, power_groundtruths = eval_power_spectrum(model=model, data=data)
+    power_spectrum_result = (k_bins_ps, residuals, power_preds, power_groundtruths)
+
+    # cross-correlation needs per-image (pred, groundtruth) pairs; assumes
+    # you have (or add) an eval_cross_correlation wrapper analogous to eval_power_spectrum
+    k_bins_cc, r_k_list = eval_cross_correlation(model=model, data=data)
+    cross_corr_result = (k_bins_cc, r_k_list)
 
     if mse_list is not None:
         print("Total MSE: ", total_mse, " Max MSE: ", max(mse_list))
@@ -478,12 +639,14 @@ def main():
               " Avg: ", np.mean(ssim_list))
 
     write_eval_results(EVAL_FILE, total_mse=total_mse, mse_list=mse_list,
-                   psnr_list=psnr_list, ssim_list=ssim_list)
+                        psnr_list=psnr_list, ssim_list=ssim_list,
+                        power_spectrum_result=power_spectrum_result,
+                        cross_corr_result=cross_corr_result)
 
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
     functions.write_doc("evaluation",
-                        runtime=elapsed_time, output_file=OUTPUT_FILE)
+                         runtime=elapsed_time, output_file=OUTPUT_FILE)
     return None
 
 if __name__ == "__main__":
