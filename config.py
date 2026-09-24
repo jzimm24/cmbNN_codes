@@ -96,7 +96,7 @@ class training_config(NamedTuple):
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # checks available devices automatically (preferred gpu)
     NUM_EPOCHS = 32                                         # number of epochs in training
     BATCH_SIZE = 16                                         # batch size
-    LR = 1e-2                                               # learning rate
+    LR = 1e-3                                               # learning rate
     IMG_DIM = 128                                           # size of maps in data
     DATA_FILE = "../data/realNoise128_10k_7rc_1WN_3f_2808.h5"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
