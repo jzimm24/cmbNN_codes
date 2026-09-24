@@ -940,175 +940,175 @@ def visualize_maps(datafile, save_path, n: int = 1, ground_truth: bool = True):
     return None
 
 
-# def main():
-
-#     start_time = time.perf_counter()
-
-#     images_noisy = []
-#     images_clean = []
-#     doc   = []
-
-#     rng = np.random.default_rng(seed)
-
-#     intermediate_imgs = []
-
-#     for i in range(num_images):
-
-#         source_number = rng.integers(0, max_source_number, endpoint=True)
-
-#         # 1) β‐model
-#         #img, I0 = generate_beta_model_image(image_size, core_radius,
-#         #                                    I0=I0_fixed)
-
-#         if flux_mode == 'lin':
-#             img = np.zeros((image_size, image_size))
-#             I0 = []
-#             rc_used = []
-#             for k in range(source_number):
-#                 x_shift = min(rng.normal(x_shift_mean, x_shift_var), x_shift_max)
-#                 y_shift = min(rng.normal(y_shift_mean, y_shift_var), y_shift_max)
-#                 img_current, I0_current, rc_used_current = generate_beta_model_image(
-#                     size=image_size,
-#                     rc_mean=rc_mean,
-#                     rc_sigma=rc_sigma,
-#                     x_shift=x_shift,
-#                     y_shift=y_shift,
-#                     I0_range=I0_range,      # e.g. (0.5,1.0)
-#                     I0_fixed=I0_fixed       # or None
-#                 )
-#                 intermediate_imgs.append(img_current)
-#                 img += img_current
-#                 I0.append(I0_current)
-#                 rc_used.append(rc_used_current)
-
-#         elif flux_mode == 'log':
-#             img = np.zeros((image_size, image_size))
-#             I0 = []
-#             rc_used = []
-#             for k in range(source_number):
-#                 x_shift = min(rng.normal(x_shift_mean, x_shift_var), x_shift_max)
-#                 y_shift = min(rng.normal(y_shift_mean, y_shift_var), y_shift_max)
-#                 img_current, I0_current, rc_used_current = generate_beta_model_image_logI0(
-#                     size=image_size,
-#                     rc_mean=rc_mean,
-#                     rc_sigma=rc_sigma,
-#                     x_shift=x_shift,
-#                     y_shift=y_shift,
-#                     I0_range=I0_range,      # e.g. (0.1,1.0)
-#                     I0_fixed=I0_fixed       # or None
-#                 )
-#                 img += img_current
-#                 I0.append(I0_current)
-#                 rc_used.append(rc_used_current)
-
-#         elif flux_mode == 'gauss':
-#             img = np.zeros((image_size, image_size))
-#             I0 = []
-#             rc_used = []
-#             for k in range(source_number):
-#                 x_shift = min(rng.normal(x_shift_mean, x_shift_var), x_shift_max)
-#                 y_shift = min(rng.normal(y_shift_mean, y_shift_var), y_shift_max)
-#                 img_current, I0_current, rc_used_current = generate_beta_model_image_gaussI0(
-#                     size=image_size,
-#                     rc_mean=rc_mean,
-#                     rc_sigma=rc_sigma,
-#                     x_shift=x_shift,
-#                     y_shift=y_shift,
-#                     I0_mean=I0_mean,        # Gaussian mean
-#                     I0_sigma=I0_sigma,      # Gaussian std-dev
-#                     I0_fixed=I0_fixed       # or None
-#                 )
-#                 img += img_current
-#                 I0.append(I0_current)
-#                 rc_used.append(rc_used_current)
-#         else:
-#             raise ValueError(f"Unknown flux_mode '{flux_mode}'. Choose 'lin', 'log', or 'gauss'.")
-        
-#         # 2) noise
-#         w = generate_white_noise(img.shape, white_noise_amplitude)
-
-#         # #THIS ONE WITH PHASE RANDOMIZATION
-#         # n1f = generate_1overf_noise(img.shape, one_over_f_slope,
-#         #                             one_over_f_amplitude)
-        
-#         ## THIS ONE WITH STRICT HERMITIAN SYMMETRY
-#         n1f = strict_1overf_noise(img.shape, one_over_f_slope,
-#                                     one_over_f_amplitude)
-
-#         # 3) optional smoothing:
-#         #    White noise originates in the detector timestreams and is therefore
-#         #    NOT convolved with the telescope beam. Only the signal and the
-#         #    red (1/f, atmospheric) noise component are beam-smoothed.
-#         smoothed = apply_gaussian_smoothing(img + n1f, gaussian_smoothing_fwhm)
-#         final = smoothed + w   # add unsmoothed white noise after beam convolution
-
-#         ## ADDING AN EXTRA STEP TO REMOVE ENTIRE IMAGE MEAN <-- FOR TESTING !!
-#         ## final -= final.mean()
-
-#         # append to lists
-#         images_clean.append(img.astype(np.float32))
-#         images_noisy.append(final.astype(np.float32))
-#         doc.append({"index": i, "rc_used": rc_used, "number_sources": source_number})
-
-#     #------------------------------------------------------------------------------------------------------------------------------
-
-#     # save_images_to_csv(images, labels, output_csv)
-#     if save_mode == 'hdf5':
-#         # save_dataset_hdf5(output_h5, images_noisy, images_clean, labels_I0)
-        
-#         # Option 1: Recommended - LZF compression (good balance)
-#         save_dataset_hdf5(
-#             output_h5, 
-#             images_noisy, 
-#             images_clean, 
-#             doc,
-#             compression='lzf'  # Fast compression, ~50% size reduction
-#         )
-        
-#         # # Option 2: Maximum speed - No compression (if disk space is plentiful)
-#         # save_dataset_hdf5(
-#         #     output_h5, 
-#         #     images_noisy, 
-#         #     images_clean, 
-#         #     labels_I0,
-#         #     compression=None  # No compression, fastest I/O
-#         # )
-        
-#         # # Option 3: Smaller files - Light gzip (slightly slower training)
-#         # save_dataset_hdf5(
-#         #     output_h5, 
-#         #     images_noisy, 
-#         #     images_clean, 
-#         #     labels_I0,
-#         #     compression='gzip',
-#         #     compression_opts=1  # Level 1 = fast, level 9 = slow
-#         # )
-        
-#     else:
-#         save_dataset_csv(output_csv, images_noisy, images_clean, doc)
-
-#     end_time = time.perf_counter()
-#     elapsed_time = end_time - start_time
-#     functions.write_doc("map_making", runtime=elapsed_time, output_file=output_h5)
-
-#     print("Plotting example maps.")    
-#     visualize_maps(output_h5, visualization_path, n=4)
-#     print("Done!")
-#     return None
-
 def main():
 
-    #number of images
-    n = 128
-    #directory of data
-    filename = "../data/100_128_single_centered_circle_varyingSize_maps.npz"
+    start_time = time.perf_counter()
 
-    single_circles_test_maps, single_circles_test_doc = make_random_multiple_circle_maps(n, 128, 1, 32, 16, 16, 64, 0, 64, 0, 64, 42)
-    noise_maps = make_noise_maps(n, 128, 1, 42)
-    single_circles_test_maps_withNoise = noise_maps + single_circles_test_maps
-    save_maps(single_circles_test_maps_withNoise, single_circles_test_maps, single_circles_test_doc, filename)
-    visualize_maps(filename, visualization_path)
+    images_noisy = []
+    images_clean = []
+    doc   = []
+
+    rng = np.random.default_rng(seed)
+
+    intermediate_imgs = []
+
+    for i in range(num_images):
+
+        source_number = rng.integers(0, max_source_number, endpoint=True)
+
+        # 1) β‐model
+        #img, I0 = generate_beta_model_image(image_size, core_radius,
+        #                                    I0=I0_fixed)
+
+        if flux_mode == 'lin':
+            img = np.zeros((image_size, image_size))
+            I0 = []
+            rc_used = []
+            for k in range(source_number):
+                x_shift = min(rng.normal(x_shift_mean, x_shift_var), x_shift_max)
+                y_shift = min(rng.normal(y_shift_mean, y_shift_var), y_shift_max)
+                img_current, I0_current, rc_used_current = generate_beta_model_image(
+                    size=image_size,
+                    rc_mean=rc_mean,
+                    rc_sigma=rc_sigma,
+                    x_shift=x_shift,
+                    y_shift=y_shift,
+                    I0_range=I0_range,      # e.g. (0.5,1.0)
+                    I0_fixed=I0_fixed       # or None
+                )
+                intermediate_imgs.append(img_current)
+                img += img_current
+                I0.append(I0_current)
+                rc_used.append(rc_used_current)
+
+        elif flux_mode == 'log':
+            img = np.zeros((image_size, image_size))
+            I0 = []
+            rc_used = []
+            for k in range(source_number):
+                x_shift = min(rng.normal(x_shift_mean, x_shift_var), x_shift_max)
+                y_shift = min(rng.normal(y_shift_mean, y_shift_var), y_shift_max)
+                img_current, I0_current, rc_used_current = generate_beta_model_image_logI0(
+                    size=image_size,
+                    rc_mean=rc_mean,
+                    rc_sigma=rc_sigma,
+                    x_shift=x_shift,
+                    y_shift=y_shift,
+                    I0_range=I0_range,      # e.g. (0.1,1.0)
+                    I0_fixed=I0_fixed       # or None
+                )
+                img += img_current
+                I0.append(I0_current)
+                rc_used.append(rc_used_current)
+
+        elif flux_mode == 'gauss':
+            img = np.zeros((image_size, image_size))
+            I0 = []
+            rc_used = []
+            for k in range(source_number):
+                x_shift = min(rng.normal(x_shift_mean, x_shift_var), x_shift_max)
+                y_shift = min(rng.normal(y_shift_mean, y_shift_var), y_shift_max)
+                img_current, I0_current, rc_used_current = generate_beta_model_image_gaussI0(
+                    size=image_size,
+                    rc_mean=rc_mean,
+                    rc_sigma=rc_sigma,
+                    x_shift=x_shift,
+                    y_shift=y_shift,
+                    I0_mean=I0_mean,        # Gaussian mean
+                    I0_sigma=I0_sigma,      # Gaussian std-dev
+                    I0_fixed=I0_fixed       # or None
+                )
+                img += img_current
+                I0.append(I0_current)
+                rc_used.append(rc_used_current)
+        else:
+            raise ValueError(f"Unknown flux_mode '{flux_mode}'. Choose 'lin', 'log', or 'gauss'.")
+        
+        # 2) noise
+        w = generate_white_noise(img.shape, white_noise_amplitude)
+
+        # #THIS ONE WITH PHASE RANDOMIZATION
+        # n1f = generate_1overf_noise(img.shape, one_over_f_slope,
+        #                             one_over_f_amplitude)
+        
+        ## THIS ONE WITH STRICT HERMITIAN SYMMETRY
+        n1f = strict_1overf_noise(img.shape, one_over_f_slope,
+                                    one_over_f_amplitude)
+
+        # 3) optional smoothing:
+        #    White noise originates in the detector timestreams and is therefore
+        #    NOT convolved with the telescope beam. Only the signal and the
+        #    red (1/f, atmospheric) noise component are beam-smoothed.
+        smoothed = apply_gaussian_smoothing(img + n1f, gaussian_smoothing_fwhm)
+        final = smoothed + w   # add unsmoothed white noise after beam convolution
+
+        ## ADDING AN EXTRA STEP TO REMOVE ENTIRE IMAGE MEAN <-- FOR TESTING !!
+        ## final -= final.mean()
+
+        # append to lists
+        images_clean.append(img.astype(np.float32))
+        images_noisy.append(final.astype(np.float32))
+        doc.append({"index": i, "rc_used": rc_used, "number_sources": source_number})
+
+    #------------------------------------------------------------------------------------------------------------------------------
+
+    # save_images_to_csv(images, labels, output_csv)
+    if save_mode == 'hdf5':
+        # save_dataset_hdf5(output_h5, images_noisy, images_clean, labels_I0)
+        
+        # Option 1: Recommended - LZF compression (good balance)
+        save_dataset_hdf5(
+            output_h5, 
+            images_noisy, 
+            images_clean, 
+            doc,
+            compression='lzf'  # Fast compression, ~50% size reduction
+        )
+        
+        # # Option 2: Maximum speed - No compression (if disk space is plentiful)
+        # save_dataset_hdf5(
+        #     output_h5, 
+        #     images_noisy, 
+        #     images_clean, 
+        #     labels_I0,
+        #     compression=None  # No compression, fastest I/O
+        # )
+        
+        # # Option 3: Smaller files - Light gzip (slightly slower training)
+        # save_dataset_hdf5(
+        #     output_h5, 
+        #     images_noisy, 
+        #     images_clean, 
+        #     labels_I0,
+        #     compression='gzip',
+        #     compression_opts=1  # Level 1 = fast, level 9 = slow
+        # )
+        
+    else:
+        save_dataset_csv(output_csv, images_noisy, images_clean, doc)
+
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
+    functions.write_doc("map_making", runtime=elapsed_time, output_file=output_h5)
+
+    print("Plotting example maps.")    
+    visualize_maps(output_h5, visualization_path, n=4)
+    print("Done!")
     return None
+
+# def main():
+
+#     #number of images
+#     n = 128
+#     #directory of data
+#     filename = "../data/100_128_single_centered_circle_varyingSize_maps.npz"
+
+#     single_circles_test_maps, single_circles_test_doc = make_random_multiple_circle_maps(n, 128, 1, 32, 16, 16, 64, 0, 64, 0, 64, 42)
+#     noise_maps = make_noise_maps(n, 128, 1, 42)
+#     single_circles_test_maps_withNoise = noise_maps + single_circles_test_maps
+#     save_maps(single_circles_test_maps_withNoise, single_circles_test_maps, single_circles_test_doc, filename)
+#     visualize_maps(filename, visualization_path)
+#     return None
 
 if __name__ == "__main__":
     print("Executing main() in maps.py")

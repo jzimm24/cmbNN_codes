@@ -60,8 +60,8 @@ class maps_config(NamedTuple):
     seed = 42                   #seed for random value selection
 
 
-    rc_mean  = 7.0                       # r_c in the β‐model (pixels)   --> DEFAULT 7 PIXELS
-    rc_sigma = 2.0                       # std dev in r_c (in pixels)   --> DEFAULT sigma=2 PIXELS
+    rc_mean  = 30.0                       # r_c in the β‐model (pixels)   --> DEFAULT 7 PIXELS
+    rc_sigma = 15.0                       # std dev in r_c (in pixels)   --> DEFAULT sigma=2 PIXELS
 
 
     I0_range                 = (0.0, 4.0)    # if I0_fixed is None, draw uniformly/log-uniformly from this
@@ -78,11 +78,11 @@ class maps_config(NamedTuple):
     gaussian_smoothing_fwhm  = 1.0        # if >0, smooth final image with this FWHM   --> DEFAULT 5 PIXELS
 
 
-    output_h5               = '../data/realNoise128_10k_2WN_3f_2808.h5'
+    output_h5               = '../data/realNoise128_10k_1WN_1f_3s_size30_2409.h5'
 
-    doc_path = "../outputs/docs/100_128_single_centered_circle_varyingSize_maps.txt"
+    doc_path = "../outputs/docs/realNoise128_10k_1WN_1f_3s_size30_2409.txt"
 
-    visualization_path = "../outputs/100_128_single_centered_circle_varyingSize_maps.png"
+    visualization_path = "../outputs/realNoise128_10k_1WN_1f_3s_size30_2409.png"
 
 maps_configs = maps_config()
 
@@ -92,19 +92,19 @@ maps_configs = maps_config()
 
 class training_config(NamedTuple):
     #class setting all necessary parameters for running training.py
-    model: str = "resnet"                                     # model architecture (choose gan or unet) 
+    model: str = "UNET"                                     # model architecture (choose gan or unet) 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # checks available devices automatically (preferred gpu)
-    NUM_EPOCHS = 32                                         # number of epochs in training
+    NUM_EPOCHS = 4                                          # number of epochs in training
     BATCH_SIZE = 16                                         # batch size
-    LR = 1e-3                                               # learning rate
+    LR = 1e-4                                               # learning rate
     IMG_DIM = 128                                           # size of maps in data
-    DATA_FILE = "../data/realNoise128_10k_7rc_1WN_3f_2808.h5"   # data file storing images
+    DATA_FILE = "../data/realNoise128_10k_1WN_1f_3s_size30_2409.h5"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
-    trained_model_name = "../models/resUNET_realNoise128_10k_7rc_1WN_3f_2808"   # name of the trained model
+    trained_model_name = "../models/UNET_lr0001_bs16_realNoise128_10k_1WN_1f_3s_size30_2409"   # name of the trained model
     crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
-    doc_path = "../outputs/docs/training_resUNET_realNoise128_10k_7rc_1WN_3f_2808.txt"   # path for documentation file of the run
-    visualization = True                                   # should the value distribution of the data + some example maps of the dataset be visualized
-    visualization_file = "../outputs/resUNET_realNoise128_10k_7rc_1WN_3f_2808.png" # path for visualisation diagrams
+    doc_path = "../outputs/docs/training_UNET_lr0001_bs16_realNoise128_10k_1WN_1f_3s_size30_2409.txt"   # path for documentation file of the run
+    visualization = True                                    # should the value distribution of the data + some example maps of the dataset be visualized
+    visualization_file = "../outputs/UNET_lr0001_bs16_realNoise128_10k_1WN_1f_3s_size30_2409.png" # path for visualisation diagrams
 
 training_configs = training_config()
 
