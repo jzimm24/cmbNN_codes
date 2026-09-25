@@ -92,19 +92,19 @@ maps_configs = maps_config()
 
 class training_config(NamedTuple):
     #class setting all necessary parameters for running training.py
-    model: str = "UNET"                                     # model architecture (choose gan or unet) 
+    model: str = "resnet"                                     # model architecture (choose gan or unet) 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # checks available devices automatically (preferred gpu)
-    NUM_EPOCHS = 4                                          # number of epochs in training
+    NUM_EPOCHS = 16                                         # number of epochs in training
     BATCH_SIZE = 16                                         # batch size
-    LR = 1e-4                                               # learning rate
+    LR = 1e-3                                               # learning rate
     IMG_DIM = 128                                           # size of maps in data
-    DATA_FILE = "../data/realNoise128_10k_1WN_1f_3s_size30_2409.h5"   # data file storing images
+    DATA_FILE = "../data/realNoise128_10k_7rc_1WN_3f_2808.h5"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
-    trained_model_name = "../models/UNET_lr0001_bs16_realNoise128_10k_1WN_1f_3s_size30_2409"   # name of the trained model
+    trained_model_name = "../models/resUNET_realNoise128_10k_7rc_1WN_3f_2808"   # name of the trained model
     crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
-    doc_path = "../outputs/docs/training_UNET_lr0001_bs16_realNoise128_10k_1WN_1f_3s_size30_2409.txt"   # path for documentation file of the run
-    visualization = True                                    # should the value distribution of the data + some example maps of the dataset be visualized
-    visualization_file = "../outputs/UNET_lr0001_bs16_realNoise128_10k_1WN_1f_3s_size30_2409.png" # path for visualisation diagrams
+    doc_path = "../outputs/docs/training_resUNET_realNoise128_10k_7rc_1WN_3f_2808.txt"   # path for documentation file of the run
+    visualization = True                                   # should the value distribution of the data + some example maps of the dataset be visualized
+    visualization_file = "../outputs/resUNET_realNoise128_10k_7rc_1WN_3f_2808.png" # path for visualisation diagrams
 
 training_configs = training_config()
 
@@ -133,6 +133,6 @@ class eval_config(NamedTuple):
 
     TITLE = OUTPUT_FILE
 
-    doc_path = "../outputs/docs/UNET_lr0001_bs16_realNoise128_10k_1WN_1f_3s_size30_2409_epoch_4.txt"
+    doc_path = "../outputs/docs/gan_realNoise128_10k_7rc_1WN_3f_2808_epoch_16.txt"
 
 evaluation_configs = eval_config()
