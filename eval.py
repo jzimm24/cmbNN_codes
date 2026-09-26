@@ -51,10 +51,13 @@ class UnknownFileStructureError(ValueError):
 def load_model(path: str = MODEL_FILE, device: str = DEVICE):
     if "unet" in path or "UNET" in path or modelArchitecture == "UNET":
         model, _ = training.init_UNET_model()
-        print("Loading Model of UNET-architecture")
+        print("Loading Model of UNET-architecture.")
     elif "gan" in path or "GAN" in path or modelArchitecture == "GAN":
         model, _, _, _ = training.init_GAN_models()
-        print("Loading Model of GAN-architecture")
+        print("Loading Model of GAN-architecture.")
+    elif "resnet" in path or modelArchitecture == "ResUNET":
+        model, _ = training.init_ResUNET_model()
+        print("Loading Model of ResUNET-architecture.")    
     else:
         print("Model path does not specify model architecture")
         raise training.ModelArchitectureError()
