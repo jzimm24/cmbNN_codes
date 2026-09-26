@@ -98,13 +98,13 @@ class training_config(NamedTuple):
     BATCH_SIZE = 16                                         # batch size
     LR = 1e-3                                               # learning rate
     IMG_DIM = 128                                           # size of maps in data
-    DATA_FILE = "../data/realNoise128_10k_7rc_1WN_3f_2808.h5"   # data file storing images
+    DATA_FILE = "../data/realNoise128_10k_1WN_1f_3s_size30_2409.h5"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
-    trained_model_name = "../models/resUNET_realNoise128_10k_7rc_1WN_3f_2808"   # name of the trained model
+    trained_model_name = "../models/resUNET_realNoise128_10k_1WN_1f_3s_size30_2409"   # name of the trained model
     crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
-    doc_path = "../outputs/docs/training_resUNET_realNoise128_10k_7rc_1WN_3f_2808.txt"   # path for documentation file of the run
-    visualization = True                                   # should the value distribution of the data + some example maps of the dataset be visualized
-    visualization_file = "../outputs/resUNET_realNoise128_10k_7rc_1WN_3f_2808.png" # path for visualisation diagrams
+    doc_path = "../outputs/docs/training_realNoise128_10k_1WN_1f_3s_size30_2409.txt"   # path for documentation file of the run
+    visualization = False                                   # should the value distribution of the data + some example maps of the dataset be visualized
+    visualization_file = "../outputs/resUNET_realNoise128_10k_1WN_1f_3s_size30_2409.png" # path for visualisation diagrams
 
 training_configs = training_config()
 
