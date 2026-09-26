@@ -112,7 +112,7 @@ def visualize_data_distr(data, outputfile, title, bin_width = 0.02, only_first_b
 
     Parameters
     ----------
-    data_file (dataloader): dataloader 
+    data (dataloader): dataloader 
     outputfile (str): file where the plotted results should be saved
     title (str): title of the plot (preferrably run title)
     bin_width (float): size of bins that store values in the distr.
