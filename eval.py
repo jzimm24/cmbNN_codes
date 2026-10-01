@@ -64,6 +64,8 @@ def load_model(path: str = MODEL_FILE, device: str = DEVICE):
     model.to(device)
     last_model_state = torch.load(path, map_location=device)
     model.load_state_dict(last_model_state["generator_state_dict"])
+    if modelArchitecture == "GAN":
+        model = model.generator
 
     return model
 
