@@ -100,11 +100,11 @@ class training_config(NamedTuple):
     IMG_DIM = 128                                           # size of maps in data
     DATA_FILE = "../data/100_128_single_centered_circle_varyingSize_maps.npz"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
-    trained_model_name = "../models/gan"   # name of the trained model
+    trained_model_name = "../models/GAN_100_128_single_centered_circle_varyingSize_maps"   # name of the trained model
     crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
-    doc_path = "../outputs/docs/gan_test.txt"   # path for documentation file of the run
+    doc_path = "../outputs/docs/GAN_100_128_single_centered_circle_varyingSize_maps.txt"   # path for documentation file of the run
     visualization = False                                   # should the value distribution of the data + some example maps of the dataset be visualized
-    visualization_file = "../outputs/gan_test_100_128_single_centered_circle_varyingSize_maps.png" # path for visualisation diagrams
+    visualization_file = "../outputs/GAN_100_128_single_centered_circle_varyingSize_maps.png" # path for visualisation diagrams
 
 training_configs = training_config()
 
