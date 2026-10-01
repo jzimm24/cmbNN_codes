@@ -15,6 +15,9 @@ import config as config
 class UnknownFileStructureError(ValueError):
     pass
 #-------------------------------------------------------------------------------------------------------------------------
+simple_sources = False
+beta_sources = True
+#-------------------------------------------------------------------------------------------------------------------------
 
 
 def make_circle_map(map_size: int = 32, radius: float = 10, cx: float = 16, cy: float = 16):
@@ -940,7 +943,7 @@ def visualize_maps(datafile, save_path, n: int = 1, ground_truth: bool = True):
     return None
 
 
-def main():
+def main_beta_sources():
 
     start_time = time.perf_counter()
 
@@ -1096,20 +1099,23 @@ def main():
     print("Done!")
     return None
 
-# def main():
+def main_simple_sources():
 
-#     #number of images
-#     n = 128
-#     #directory of data
-#     filename = "../data/100_128_single_centered_circle_varyingSize_maps.npz"
+    #number of images
+    n = 128
+    #directory of data
+    filename = "../data/100_128_single_centered_circle_varyingSize_maps.npz"
 
-#     single_circles_test_maps, single_circles_test_doc = make_random_multiple_circle_maps(n, 128, 1, 32, 16, 16, 64, 0, 64, 0, 64, 42)
-#     noise_maps = make_noise_maps(n, 128, 1, 42)
-#     single_circles_test_maps_withNoise = noise_maps + single_circles_test_maps
-#     save_maps(single_circles_test_maps_withNoise, single_circles_test_maps, single_circles_test_doc, filename)
-#     visualize_maps(filename, visualization_path)
-#     return None
+    single_circles_test_maps, single_circles_test_doc = make_random_multiple_circle_maps(n, 128, 1, 32, 16, 16, 64, 0, 64, 0, 64, 42)
+    noise_maps = make_noise_maps(n, 128, 1, 42)
+    single_circles_test_maps_withNoise = noise_maps + single_circles_test_maps
+    save_maps(single_circles_test_maps_withNoise, single_circles_test_maps, single_circles_test_doc, filename)
+    visualize_maps(filename, visualization_path)
+    return None
 
 if __name__ == "__main__":
     print("Executing main() in maps.py")
-    main()
+    if simple_sources:
+        main_simple_sources()
+    if beta_sources:
+        main_beta_sources()

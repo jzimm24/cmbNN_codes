@@ -98,51 +98,83 @@ def load_and_prep_eval_data(data_file, epsilon = 1e-8):
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False)
     return dataloader, data_eval_normalisationParas, sol_eval_normalisationParas
 
-def load_random_sample(path: str, seed=42, epsilon=1e-8):
-    dataloader, data_paras, sol_paras = load_and_prep_eval_data(path, epsilon)
+def load_random_samples(path: str, n = 1, seed=42, epsilon=1e-8):
+    dataloader, data_paras, sol_paras = eval.load_and_prep_eval_data(path, epsilon)
 
     dataset = dataloader.dataset          # TensorDataset of (noisy, clean) pairs
-    n_pairs = len(dataset)
 
     rng = np.random.default_rng(seed)
-    idx = int(rng.integers(0, n_pairs))
-    print(f"Randomly chosen index (within eval split): {idx} of {n_pairs}.")
+    idxs = rng.choice(len(dataset), size=n, replace=False)
+    print(f"Randomly chosen index (within eval split): {idxs} of {len(dataset)}.")
 
-    tensor_noisy, tensor_clean = dataset[idx]   # each has shape (1, H, W)
+    tensor_noisy, tensor_clean = dataset[idxs]   # each has shape (1, H, W)
     print(f"Sample shape: {tuple(tensor_noisy.shape)}")
 
     # add batch dimension -> (1, 1, H, W), same as the old function returned
     return tensor_noisy.unsqueeze(0), tensor_clean.unsqueeze(0)
 
-def example_forward_pass(model, sample = None, path = DATA_FILE):
+def example_forward_pass(model, sample=None, path=DATA_FILE):
     if sample is None:
-        sample = load_random_sample(path)
-    sample_on_device = sample[0].to(DEVICE)
-    output = model(sample_on_device)
-    ground_truth = sample[1].to(DEVICE)
+        sample = load_random_samples(path)
+    sample_on_device = sample[0].squeeze(0).to(DEVICE)
+    ground_truth = sample[1].squeeze(0).to(DEVICE)
+    model.eval()
+    with torch.no_grad():
+        output = model(sample_on_device)
     return sample_on_device, output, ground_truth
 
-def make_figures(maps, save_path: str = "../outputs/" + OUTPUT_FILE, title: str = TITLE):
+def make_figures(
+    maps=None,
+    model=None,
+    n: int = 1,
+    data_path: str = DATA_FILE,
+    save_path: str = "../outputs/" + OUTPUT_FILE,
+    title: str = TITLE,
+):
+    """
+    Plot n rows of (noisy | clean | predicted) triplets.
+
+    maps: list of n triplets, i.e. [[noisy_0, clean_0, pred_0], ..., [noisy_n, clean_n, pred_n]].
+          If None, n random samples are loaded from data_path and predictions are
+          computed with `model` (required in that case).
+    Entries can be torch tensors or numpy arrays.
+    """
+    if maps is None:
+        assert model is not None, "model is required when no maps are passed"
+        sample = load_random_samples(data_path, n=n)
+        noisy, pred, clean = example_forward_pass(model, sample)
+        maps = [[noisy[i], clean[i], pred[i]] for i in range(len(noisy))]
+
     n = len(maps)
-    fig, axes = plt.subplots(1, n, figsize=(5 * n, 5))
-    if n == 1:
-        axes = [axes]
+    assert all(len(triplet) == 3 for triplet in maps), "each entry in maps must be [noisy, clean, pred]"
 
-    for i, ax in enumerate(axes):
-        img = maps[i]
+    col_titles = ["Noisy", "Clean", "Predicted"]
 
-        # If it's a torch tensor, convert to numpy and squeeze extra dims
-        if hasattr(img, "detach"):
-            img = img.detach().cpu().numpy()
-        img = img.squeeze()
+    fig, axes = plt.subplots(n, 3, figsize=(15, 5 * n), squeeze=False)
 
-        im = ax.imshow(img, cmap="viridis")
-        ax.axis("off")
-        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    
-    plt.title(title)
+    for i, triplet in enumerate(maps):
+        imgs = []
+        for m in triplet:
+            # Torch tensor -> numpy, drop channel/batch dims
+            if hasattr(m, "detach"):
+                m = m.detach().cpu().numpy()
+            imgs.append(np.asarray(m).squeeze())
 
-    plt.tight_layout()
+        # Clean and predicted share a color scale so they are directly comparable;
+        # noisy gets its own, since its range is usually much larger.
+        vmin, vmax = imgs[1].min(), imgs[1].max()
+        limits = [(None, None), (vmin, vmax), (vmin, vmax)]
+
+        for j, (img, (lo, hi)) in enumerate(zip(imgs, limits)):
+            ax = axes[i, j]
+            im = ax.imshow(img, cmap="viridis", vmin=lo, vmax=hi)
+            ax.axis("off")
+            fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+            if i == 0:
+                ax.set_title(col_titles[j])
+
+    fig.suptitle(title)
+    fig.tight_layout()
 
     fig.savefig(save_path, bbox_inches="tight")
     print(f"Figure saved to: {save_path}")
