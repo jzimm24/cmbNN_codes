@@ -215,7 +215,7 @@ class ResUNET(nn.Module):
 
 
 
-# GAN --------------------------------------------------------------------------------------------------------------------------------------
+# GAN1 -------------------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------------------------------
 
 # Losses
@@ -363,4 +363,121 @@ class Discriminator(nn.Module):
         x = self.last(x)
 
         return x
+
+# GAN2 -------------------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------------
+
+def downsample_block(in_channels, out_channels):
+     return nn.Sequential(nn.Conv2d(in_channels, out_channels, kernel_size = 3, stride = 2, padding = 1), 
+                          nn.BatchNorm2d(out_channels), 
+                          nn.LeakyReLU(0.2, inplace = True)
+                          )
+
+class PairClassifier(nn.Module):
+    def __init__(self, in_channels = 1, conv_channels = 16, depth = 5):
+        """
+        conv_channels (int): number of channels created by every Conv2d
+        n_blocks (int): Number of convolution blocks before regressing to predicting scalar for each image
+        """
+        super().__init__()
+        
+        channels = [conv_channels * (2**i) for i in range(depth)]
+        blocks = []
+        previous_channels = 2*in_channels
+
+        for c in channels:
+            blocks.append(downsample_block(previous_channels, c))
+            previous_channels = c
+            self.downsample = nn.Sequential(*blocks)
+
+        self.pool = nn.AdaptiveAvgPool2d(1)
+        self.classifier = nn.Linear(previous_channels, 1)
+
+    def forward(self, img_a, img_b):
+        x = torch.cat([img_a, img_b], dim = 1)
+        x = self.downsample(x)
+        x = self.pool(x).flatten(1)
+        
+        return self.classifier(x)
+class Gan():
+    def __init__(self, in_channels=1, discriminator_conv_channels = 32, 
+                 discriminator_depth = 5, lambda_recon = 100.0, lr = 2e-4, betas = (0.5, 0.999), device = None):
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+
+        self.generator = UNET(in_channels, in_channels).to(self.device)
+        self.discriminator = PairClassifier(in_channels, discriminator_conv_channels, discriminator_depth).to(self.device)
+
+        self.lambda_recon = lambda_recon
+
+        self.recon_loss_fn = nn.L1Loss()
+        self.adv_loss_fn = nn.BCEWithLogitsLoss()
+
+        self.opt_G = torch.optim.Adam(self.generator.parameters(), lr=lr, betas=betas)
+        self.opt_D = torch.optim.Adam(self.discriminator.parameters(), lr=lr, betas=betas)
+
+    def training_step(self, noisy_imgs, groundtruth_imgs):
+        real_label = torch.ones(noisy_imgs.size(0), 1, device=self.device)
+        fake_label = torch.zeros(noisy_imgs.size(0), 1, device=self.device)
+
+        predictions = self.generator(noisy_imgs)
+
+        self.opt_D.zero_grad()
+
+        pred_real = self.discriminator(noisy_imgs, groundtruth_imgs)
+        loss_D_real = self.adv_loss_fn(pred_real, real_label)
+
+        pred_fake = self.discriminator(noisy_imgs, predictions.detach())
+        loss_D_fake = self.adv_loss_fn(pred_fake, fake_label)
+
+        loss_D = 0.5 * (loss_D_real + loss_D_fake)
+        loss_D.backward()
+        self.opt_D.step()
+
+        self.opt_G.zero_grad()
+
+        loss_recon = self.recon_loss_fn(predictions, groundtruth_imgs)
+
+        pred_fake_G = self.discriminator(noisy_imgs, predictions)
+        loss_adv = self.adv_loss_fn(pred_fake_G, real_label)
+
+        loss_G = self.lambda_recon * loss_recon + loss_adv
+        loss_G.backward()
+        self.opt_G.step()
+
+        return{
+            "loss_D": loss_D.item(),
+            "loss_G": loss_G.item(),
+            "loss_recon": loss_recon.item(),
+            "loss_adv": loss_adv.item()
+        }
+    
+    def train(self):
+        self.generator.train()
+        self.discriminator.train()
+        return self
+
+    def eval(self):
+        self.generator.eval()
+        self.discriminator.eval()
+        return self
+    
+    def state_dict(self):
+        return {
+            "generator": self.generator.state_dict(),
+            "discriminator": self.discriminator.state_dict(),
+            "opt_G": self.opt_G.state_dict(),
+            "opt_D": self.opt_D.state_dict(),
+        }
+
+    def load_state_dict(self, state):
+        self.generator.load_state_dict(state["generator"])
+        self.discriminator.load_state_dict(state["discriminator"])
+        self.opt_G.load_state_dict(state["opt_G"])
+        self.opt_D.load_state_dict(state["opt_D"])
+
+    def to(self, device):
+        self.generator.to(device)
+        self.discriminator.to(device)
+        self.device = device
+        return self
 

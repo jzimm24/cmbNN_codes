@@ -415,134 +415,60 @@ def training_and_saving_resUNET_model(resUNET, resUNET_optimizer, dataloader, nu
     print("Saved")
     return None
 
+# GAN -------------------------------------------------------------------------------------------------------------------------------------
 
+def init_GAN_model(in_channels = 1, discriminator_conv_channels = 32, discriminator_depth = 5, lambda_recon = 100, lr = LR, betas = (0.5, 0.999), device = DEVICE):
+    gan = models.Gan(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr, betas, device)
+    return gan
 
-# GAN --------------------------------------------------------------------------------------------------------------------------------------
-
-def init_GAN_models(in_chanels_gen: int = 1,
-                out_chanels_gen: int = 1,
-                in_chanels_disc: int = 1,
-                out_chanels_disc: int = 1,
-                device = DEVICE,
-                img_dim = IMG_DIM,
-                lr_gen = LR,
-                lr_disc = LR):
-    """
-    Initializes a GAN Model. The architecture is dependent on the parameters.
-
-    Parameters
-    ----------
-    in_chanels_gen (int): number of in_chanels before very first convolutional-layer of the UNET generator
-    out_chanel_gen (int): number of chanels returned after the deconder and the very final layer of the unet generator
-    in_chanel_disc (int): chanels the discriminator takes in
-    out_chanels_disc (int): out chanels the discriminator produces
-    device: device on which training is done
-    img_dim (int): pixel size of the squared image
-    lr_gen (float): learning rate of the generator
-    lr_disc(float) learning rate of the discriminator
-
-    Returns
-    -------
-    generator: initialized UNET model as generator
-    generator_optimizer: corresponding optimizer of the UNET
-    discriminator: Discriminnator (simple downsampling model)
-    discriminator_optimizer: Optimizer of the discriminator
-    """
-    generator = models.UNET(in_chanels_gen, out_chanels_gen).to(device)
-    generator_optimizer = torch.optim.Adam(generator.parameters(), lr=lr_gen)
-
-    #discriminator = models.Discriminator(img_dim)
-    discriminator = models.Discriminator(img_dim, in_chanels_disc, out_chanels_disc).to(device)
-    discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=lr_disc)
-
-    return generator, generator_optimizer, discriminator, discriminator_optimizer
-
-def training_step_GAN(images, ground_truths, generator, gen_optimizer, discriminator, disc_optimizer):
-    """
-    One training step for the Gan model consisting of one forward pass through a batch for the generator and discriminator respectively.
-    A subsequent loss calculation for both and a backwards pass using both losses in the generator updates. 
-
-    Parameters
-    ----------
-    images (dataloader batch):
-    ground_truths (dataloader batch):
-    generator (model): generator model (unet)
-    gen_optimizer ():
-    discriminator ():
-    disc_optimizer ():
-
-    Returns
-    -------
-    gen_loss (float): current loss of the generator for this batch
-    disc_loss (float): current loss of the discriminator for this batch
-    gen_optimizer (): current state of the optimizer for the generator for updating network parameters
-    disc_optimizer (): current state of the optimizer for the discriminator for updating network parameters
-    """
-    images = images.to(DEVICE)  # move input to GPU
-    ground_truths = ground_truths.to(DEVICE)  # move target to GPU
-
-    # generator Forward
-    preds = generator(images)
-    # discriminator Forward
-    img_groundTruths_discrimination = discriminator(images, ground_truths)
-    img_preds_discrimination = discriminator(images, preds.detach())
-
-    # losses
-    gen_loss = models.generator_loss(img_preds_discrimination, preds, ground_truths)
-    disc_loss = models.discriminator_loss(img_groundTruths_discrimination, img_preds_discrimination)
-
-    # backwards
-    gen_optimizer.zero_grad()
-    gen_loss.backward(retain_graph=True)
-    gen_optimizer.step()
-    disc_optimizer.zero_grad()
-    disc_loss.backward()
-    disc_optimizer.step()
-
-    return gen_loss, disc_loss, gen_optimizer, disc_optimizer
-
-def training_loop_GAN(generator, gen_optimizer, discriminator, disc_optimizer, dataloader, num_epochs = NUM_EPOCHS):
-    """
-    Works though the data for a given number of epochss For doing so, it uses the previously defined training_step_UNET.
-    The losses are only viusally diplayed once each epoch.
-
-    Parameters
-    ----------
-
-    unet (model): unet model (should be initialized and in training mode).
-    unet_optimizer ():
-    dataloader (dataloader batch): data including both the images and their respective ground truth images.
-    num_epochs (int): number of epochs the train should run.
-
-    Returns
-    -------
-    loss (float): current loss of the batch
-    optimizer (): current state of the unet optimizer for updating network parameters
-    """
+def training_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS):
     for epoch in range(num_epochs):
+        print("##############")
+        print("Epoch: ", epoch)
+        print("##############")
+        running_loss_D = 0
+        running_loss_G = 0
+        running_loss_adv = 0
+        running_loss_recon = 0
         for x, y in dataloader:
-            current_gen_loss, current_disc_loss, current_gen_optimizer, current_disc_optimizer = training_step_GAN(x, y, generator, gen_optimizer, discriminator, disc_optimizer)
-        print("Epoch: " + str(epoch))
-        print("Loss Generator: " + str(current_gen_loss))
-        print("Loss Discriminator: " + str(current_disc_loss))
+            x = x.to(GAN.device)
+            y = y.to(GAN.device)
+            current_loss_dict = GAN.training_step(x, y)
+            running_loss_D += current_loss_dict["loss_D"]
+            running_loss_G += current_loss_dict["loss_G"]
+            running_loss_recon += current_loss_dict["loss_recon"]
+            running_loss_adv += current_loss_dict["loss_adv"]
+        print("discriminator Loss: ", running_loss_D/len(dataloader))
+        print("generator loss:", running_loss_G/len(dataloader))
+        loss_dict = {"loss_disc": running_loss_D,
+                     "loss_gen": running_loss_G,
+                     "loss_recon": running_loss_recon,
+                     "loss_adv": running_loss_adv}
 
-    return generator, discriminator, num_epochs, current_gen_loss, current_disc_loss, current_gen_optimizer, current_disc_optimizer
+    return GAN, loss_dict
 
-def training_and_saving_GAN_model(generator, gen_optimizer, discriminator, disc_optimizer, dataloader, num_epochs = NUM_EPOCHS, path = "../models/0307_real_noise_10k_model_3_32_1e-4", prev_epochs = 0):
+def training_and_saving_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS, path = trained_model_name, prev_epochs = 0):
+    """
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    """
     print("############################")
     print("Training model:")
     print("############################")
-    generator, discriminator, num_epochs, current_gen_loss, current_disc_loss, current_gen_optimizer, current_disc_optimizer = training_loop_GAN(generator, gen_optimizer, discriminator, disc_optimizer, dataloader, num_epochs)
+    gan, loss = training_GAN(GAN, dataloader, num_epochs)
     checkpoint = {
     "epoch": num_epochs,
-    "generator_state_dict": generator.state_dict(),
-    "discriminator_state_dict": discriminator.state_dict(),
-    "optimizer_G_state_dict": current_gen_optimizer.state_dict(),
-    "optimizer_D_state_dict": current_disc_optimizer.state_dict(),
-    "loss_G": current_gen_loss,
-    "loss_D": current_disc_loss,
-}
-    print("Saving model at: ", path)
+    "generator_state_dict": gan.state_dict(),
+    "loss_disc": loss["loss_disc"],
+    "loss_gen": loss["loss_gen"],
+    "loss_recon": loss["loss_recon"],
+    "loss_adv": loss["loss_adv"]
+    }
+    print("Saving model(GAN) at: ", path)
     torch.save(checkpoint, f"{path}_epoch_{num_epochs+prev_epochs}.pth")
     print("Saved")
     return None
@@ -566,10 +492,14 @@ def main():
         resunet.train()
         training_and_saving_resUNET_model(resunet, resunet_optimizer, dataloader=dataloader)
     elif model == "GAN" or model == "gan":
-        generator, generator_optimizer, discriminator, discriminator_optimizer = init_GAN_models()
-        generator.train()
-        discriminator.train()
-        training_and_saving_GAN_model(generator, generator_optimizer, discriminator, discriminator_optimizer, dataloader, path=trained_model_name)
+        # generator, generator_optimizer, discriminator, discriminator_optimizer = init_GAN_models()
+        # generator.train()
+        # discriminator.train()
+        # training_and_saving_GAN_model(generator, generator_optimizer, discriminator, discriminator_optimizer, dataloader, path=trained_model_name)
+        gan = init_GAN_model()
+        gan.train()
+        training_and_saving_GAN(gan, dataloader)
+
     else:
         raise ModelArchitectureError(model)
     print("Done!")

@@ -53,7 +53,7 @@ def load_model(path: str = MODEL_FILE, device: str = DEVICE):
         model, _ = training.init_UNET_model()
         print("Loading Model of UNET-architecture.")
     elif "gan" in path or "GAN" in path or modelArchitecture == "GAN":
-        model, _, _, _ = training.init_GAN_models()
+        model = training.init_GAN_model()
         print("Loading Model of GAN-architecture.")
     elif "resnet" in path or modelArchitecture == "ResUNET":
         model, _ = training.init_ResUNET_model()
@@ -65,48 +65,38 @@ def load_model(path: str = MODEL_FILE, device: str = DEVICE):
     last_model_state = torch.load(path, map_location=device)
     model.load_state_dict(last_model_state["generator_state_dict"])
 
-    print(f"Loaded model from epoch {last_model_state['epoch']} onto {DEVICE}")
-    if "gan" in path or "GAN" in path or modelArchitecture == "GAN":
-        print(f"  loss_G at save time: {last_model_state['loss_G']}")
-        print(f"  loss_D at save time: {last_model_state['loss_D']}")
-
     return model
 
-# def load_random_sample(path: str, seed = 42, epsilon = 1e-8):       #TODO: load random sample from part of the dataloader that was saved for evaluation
-#     np.random.seed(seed)
-#     if path[-3:] == ".h5":
-#         with h5py.File(path, "r") as f:
-#             dataset = f["noisy"]
-#             num_maps = dataset.shape[0]
-#             idx = np.random.randint(0, num_maps)
-#             print(f"Randomly chosen index: {idx}.")
-#             sample_noisy = dataset[idx]
-
-#             dataset_clean = f["clean"]
-#             sample_clean = dataset_clean[idx]
-
-#             print(f"Sample [{idx}] loaded.")
-#     elif path[-3:] == "npz":
-#         dataset_noisy, dataset_clean, _ = functions.load_npz(path=path)
-#         num_maps = dataset_noisy.shape[0]
-#         idx = np.random.randint(0, num_maps)
-#         print(f"Randomly chosen index: {idx}.")
-
-#         sample_noisy = dataset_noisy[idx]
-#         sample_clean = dataset_clean[idx]
-#         print(f"Sample [{idx}] loaded.")
-
-#     else:
-#         raise UnknownFileStructureError(path[-7:])
+def load_and_prep_eval_data(data_file, epsilon = 1e-8):
+    if 1-EVAL_SPLIT != training.TRAIN_SPLIT:
+        print("TRAIN_SPLIT not consistently defined. Continuing with eval.TRAIN_SPLIT.")
+    print("EVAL_SPLIT: ", EVAL_SPLIT)
+    if data_file[-3:] == "npz":
+        data, sol, paras = functions.load_npz(data_file)
+        print("Data loading from .npz file")
+    elif data_file[-2:] == "h5":
+        data, sol = functions.load_h5py(data_file)
+        print("Data loading from .h5 file")
+    else:
+        raise training.DataFileFormatError(data_file)
     
-#     print("#################")
-#     print(sample_noisy.shape)
-#     sample_noisy_normalized, _, _ = functions.normalize_map(sample_noisy, epsilon)
-#     sample_clean_normalized, _, _ = functions.normalize_map(sample_clean, epsilon)
+    n_total = data.shape[0]
+    n_eval = int(EVAL_SPLIT*n_total)
 
-#     tensor_noisy = torch.from_numpy(sample_noisy_normalized).float().unsqueeze(0).unsqueeze(0)
-#     tensor_clean = torch.from_numpy(sample_clean_normalized).float().unsqueeze(0).unsqueeze(0)
-#     return tensor_noisy, tensor_clean
+    data_eval = data[(n_total-n_eval):]
+    sol_eval = sol[(n_total - n_eval):]
+
+    data_eval_normalized, *data_eval_normalisationParas = functions.normalize_data(data_eval, epsilon)
+    sol_eval_normalized, *sol_eval_normalisationParas = functions.normalize_data(sol_eval, epsilon)
+
+    data_eval_normalisationParas = tuple(data_eval_normalisationParas)
+    sol_eval_normalisationParas = tuple(sol_eval_normalisationParas)
+
+    data_tensor = torch.from_numpy(data_eval_normalized).float().unsqueeze(1)
+    sol_tensor = torch.from_numpy(sol_eval_normalized).float().unsqueeze(1)
+    dataset = TensorDataset(data_tensor, sol_tensor)
+    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False)
+    return dataloader, data_eval_normalisationParas, sol_eval_normalisationParas
 
 def load_random_sample(path: str, seed=42, epsilon=1e-8):
     dataloader, data_paras, sol_paras = load_and_prep_eval_data(path, epsilon)
@@ -159,37 +149,6 @@ def make_figures(maps, save_path: str = "../outputs/" + OUTPUT_FILE, title: str 
 
     plt.close(fig)
     return None
-
-def load_and_prep_eval_data(data_file, epsilon = 1e-8):
-    if 1-EVAL_SPLIT != training.TRAIN_SPLIT:
-        print("TRAIN_SPLIT not consistently defined. Continuing with eval.TRAIN_SPLIT.")
-    print("EVAL_SPLIT: ", EVAL_SPLIT)
-    if data_file[-3:] == "npz":
-        data, sol, paras = functions.load_npz(data_file)
-        print("Data loading from .npz file")
-    elif data_file[-2:] == "h5":
-        data, sol = functions.load_h5py(data_file)
-        print("Data loading from .h5 file")
-    else:
-        raise training.DataFileFormatError(data_file)
-    
-    n_total = data.shape[0]
-    n_eval = int(EVAL_SPLIT*n_total)
-
-    data_eval = data[(n_total-n_eval):]
-    sol_eval = sol[(n_total - n_eval):]
-
-    data_eval_normalized, *data_eval_normalisationParas = functions.normalize_data(data_eval, epsilon)
-    sol_eval_normalized, *sol_eval_normalisationParas = functions.normalize_data(sol_eval, epsilon)
-
-    data_eval_normalisationParas = tuple(data_eval_normalisationParas)
-    sol_eval_normalisationParas = tuple(sol_eval_normalisationParas)
-
-    data_tensor = torch.from_numpy(data_eval_normalized).float().unsqueeze(1)
-    sol_tensor = torch.from_numpy(sol_eval_normalized).float().unsqueeze(1)
-    dataset = TensorDataset(data_tensor, sol_tensor)
-    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False)
-    return dataloader, data_eval_normalisationParas, sol_eval_normalisationParas
 
 def denormalisation(normalised_dataloader, amplitude):
 
@@ -619,32 +578,41 @@ def main():
 
     data, _, _ = load_and_prep_eval_data(DATA_FILE)
 
-    total_mse = mse_list = psnr_list = ssim_list = None
+    visuals = True
+    metrics = False
+    if visuals:
+        print("Creating Figures.")
+        noisy, clean = load_random_sample(DATA_FILE, seed=11)
+        make_figures([noisy, clean])
+    if metrics:
+        print("Calculating metrics.")
 
-    total_mse, mse_list = eval_MSE(model=model, data=data)
-    psnr_list = eval_PSNR(model=model, data=data)
-    ssim_list = eval_ssim(model=model, data=data)
+        total_mse = mse_list = psnr_list = ssim_list = None
 
-    k_bins_ps, residuals, power_preds, power_groundtruths = eval_power_spectrum(model=model, data=data)
-    power_spectrum_result = (k_bins_ps, residuals, power_preds, power_groundtruths)
+        total_mse, mse_list = eval_MSE(model=model, data=data)
+        psnr_list = eval_PSNR(model=model, data=data)
+        ssim_list = eval_ssim(model=model, data=data)
 
-    # cross-correlation needs per-image (pred, groundtruth) pairs; assumes
-    # you have (or add) an eval_cross_correlation wrapper analogous to eval_power_spectrum
-    k_bins_cc, r_k_list = eval_cross_correlation(model=model, data=data)
-    cross_corr_result = (k_bins_cc, r_k_list)
+        k_bins_ps, residuals, power_preds, power_groundtruths = eval_power_spectrum(model=model, data=data)
+        power_spectrum_result = (k_bins_ps, residuals, power_preds, power_groundtruths)
 
-    if mse_list is not None:
-        print("Total MSE: ", total_mse, " Max MSE: ", max(mse_list))
-    if psnr_list is not None:
-        print("PSNR Max: ", max(psnr_list), " Min: ", min(psnr_list))
-    if ssim_list is not None:
-        print("SSIM Max: ", max(ssim_list), " Min: ", min(ssim_list),
-              " Avg: ", np.mean(ssim_list))
+        # cross-correlation needs per-image (pred, groundtruth) pairs; assumes
+        # you have (or add) an eval_cross_correlation wrapper analogous to eval_power_spectrum
+        k_bins_cc, r_k_list = eval_cross_correlation(model=model, data=data)
+        cross_corr_result = (k_bins_cc, r_k_list)
 
-    write_eval_results(EVAL_FILE, total_mse=total_mse, mse_list=mse_list,
-                        psnr_list=psnr_list, ssim_list=ssim_list,
-                        power_spectrum_result=power_spectrum_result,
-                        cross_corr_result=cross_corr_result)
+        if mse_list is not None:
+            print("Total MSE: ", total_mse, " Max MSE: ", max(mse_list))
+        if psnr_list is not None:
+            print("PSNR Max: ", max(psnr_list), " Min: ", min(psnr_list))
+        if ssim_list is not None:
+            print("SSIM Max: ", max(ssim_list), " Min: ", min(ssim_list),
+                " Avg: ", np.mean(ssim_list))
+
+        write_eval_results(EVAL_FILE, total_mse=total_mse, mse_list=mse_list,
+                            psnr_list=psnr_list, ssim_list=ssim_list,
+                            power_spectrum_result=power_spectrum_result,
+                            cross_corr_result=cross_corr_result)
 
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
