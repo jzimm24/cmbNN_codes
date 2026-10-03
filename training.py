@@ -456,6 +456,8 @@ def training_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS):
             running_loss_adv += current_loss_dict["loss_adv"]
         print("discriminator Loss: ", running_loss_D/len(dataloader))
         print("generator loss:", running_loss_G/len(dataloader))
+        print("reconstruction loss:", running_loss_recon/len(dataloader))
+        print("adversarial loss:", running_loss_adv/len(dataloader))
         loss_dict = {"loss_disc": running_loss_D,
                      "loss_gen": running_loss_G,
                      "loss_recon": running_loss_recon,
