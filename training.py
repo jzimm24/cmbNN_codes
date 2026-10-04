@@ -417,8 +417,12 @@ def training_and_saving_resUNET_model(resUNET, resUNET_optimizer, dataloader, nu
 
 # GAN -------------------------------------------------------------------------------------------------------------------------------------
 
-def load_GAN_model(checkpoint_path, **init_kwargs):
-    gan = init_GAN_model(**init_kwargs)  # must use the same architecture hyperparameters as the saved run
+def init_GAN_model(in_channels = 1, discriminator_conv_channels = 32, discriminator_depth = 5, lambda_recon = 100, lr = LR, betas = (0.5, 0.999), device = DEVICE):
+    gan = models.Gan(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr, betas, device)
+    return gan
+
+def load_GAN_model(checkpoint_path, in_channels = 1, discriminator_conv_channels = 32, discriminator_depth = 5, lambda_recon = 100, lr = LR, betas = (0.5, 0.999), device = DEVICE):
+    gan = init_GAN_model(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr, betas, device)
     checkpoint = torch.load(checkpoint_path, map_location=gan.device)
     gan.load_state_dict(checkpoint["generator_state_dict"])  # key name kept from your save function
 
@@ -432,10 +436,6 @@ def load_GAN_model(checkpoint_path, **init_kwargs):
     prev_epochs = checkpoint.get("epoch", 0)
     print(f"Loaded {checkpoint_path} (trained for {prev_epochs} epochs)")
     return gan, prev_epochs
-
-def init_GAN_model(in_channels = 1, discriminator_conv_channels = 32, discriminator_depth = 5, lambda_recon = 100, lr = LR, betas = (0.5, 0.999), device = DEVICE):
-    gan = models.Gan(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr, betas, device)
-    return gan
 
 def training_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS):
     for epoch in range(num_epochs):
