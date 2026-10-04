@@ -52,20 +52,27 @@ def load_model(path: str = MODEL_FILE, device: str = DEVICE):
     if "unet" in path or "UNET" in path or modelArchitecture == "UNET":
         model, _ = training.init_UNET_model()
         print("Loading Model of UNET-architecture.")
+        model.to(device)
+        last_model_state = torch.load(path, map_location=device)
+        model.load_state_dict(last_model_state["model_state_dict"])
     elif "gan" in path or "GAN" in path or modelArchitecture == "GAN":
         model = training.init_GAN_model()
         print("Loading Model of GAN-architecture.")
+        model.to(device)
+        last_model_state = torch.load(path, map_location=device)
+        model.load_state_dict(last_model_state["generator_state_dict"])
     elif "resnet" in path or modelArchitecture == "ResUNET":
         model, _ = training.init_ResUNET_model()
-        print("Loading Model of ResUNET-architecture.")    
+        print("Loading Model of ResUNET-architecture.")  
+        model.to(device)
+        last_model_state = torch.load(path, map_location=device)
+        model.load_state_dict(last_model_state["model_state_dict"])  
     else:
         print("Model path does not specify model architecture")
         raise training.ModelArchitectureError()
-    model.to(device)
-    last_model_state = torch.load(path, map_location=device)
-    model.load_state_dict(last_model_state["generator_state_dict"])
     if modelArchitecture == "GAN":
         model = model.generator
+    print("Model loaded!")
 
     return model
 

@@ -36,6 +36,9 @@ IMG_DIM = config.training_configs.IMG_DIM
 DATA_FILE = config.training_configs.DATA_FILE
 TRAIN_SPLIT = config.training_configs.TRAIN_SPLIT
 
+NEW_MODEL = config.training_configs.NEW_MODEL
+predecessor_model = config.training_configs.predecessor_model
+
 # no .pth
 trained_model_name = config.training_configs.trained_model_name
 
@@ -227,6 +230,22 @@ def init_UNET_model(in_chanels: int = 1,
 
     return unet, unet_optimizer
 
+def load_UNET_model(checkpoint_path, in_channels = 1, out_chanels = 1, device = DEVICE, lr = LR, auto_normalization = True):
+    print("Loading previously trained model.")
+    unet, unet_optimizer = init_UNET_model(in_channels, out_chanels, device, lr, auto_normalization)
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    unet.load_state_dict(checkpoint["model_state_dict"])
+    if "optimizer_state_dict" in checkpoint:
+        unet_optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    else:
+        print("Warning: no optimizer state in checkpoint, Adam moments restart from zero.")
+
+
+    prev_epochs = checkpoint.get("epoch", 0)
+    print(f"Loaded Model: {checkpoint_path} (trained for {prev_epochs} epochs)")
+    return unet, unet_optimizer, prev_epochs
+
+
 def training_step_UNET(images, ground_truths, unet, unet_optimizer):
     """
     One training step for the unet model consisting of one forward pass through a batch, a subsequent loss
@@ -315,7 +334,7 @@ def training_and_saving_UNET_model(unet, unet_optimizer, dataloader, num_epochs 
     unet, num_epochs, current_loss, current_optimizer = training_loop_UNET(unet, unet_optimizer, dataloader, num_epochs)
     checkpoint = {
     "epoch": num_epochs,
-    "generator_state_dict": unet.state_dict(),
+    "model_state_dict": unet.state_dict(),
     "optimizer_state_dict": current_optimizer.state_dict(),
     "loss": current_loss
 }
@@ -343,6 +362,20 @@ def init_ResUNET_model(in_chanels: int = 1,
     resUNET_optimizer = torch.optim.Adam(resUNET.parameters(), lr=lr)
 
     return resUNET, resUNET_optimizer
+
+def load_ResUNET_model(checkpoint_path, in_channels = 1, out_chanels = 1, device = DEVICE, lr = LR):
+    resUNET, resUNET_optimizer = init_ResUNET_model(in_channels, out_chanels, device, lr)
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    resUNET.load_state_dict(checkpoint["model_state_dict"])
+    if "optimizer_state_dict" in checkpoint:
+        resUNET_optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    else:
+        print("Warning: no optimizer state in checkpoint, Adam moments restart from zero.")
+
+
+    prev_epochs = checkpoint.get("epoch", 0)
+    print(f"Loaded Model: {checkpoint_path} (trained for {prev_epochs} epochs)")
+    return resUNET, resUNET_optimizer, prev_epochs
 
 def training_step_resUNET(images, ground_truths, resUNET, resUNET_optimizer):
     """
@@ -406,7 +439,7 @@ def training_and_saving_resUNET_model(resUNET, resUNET_optimizer, dataloader, nu
     resUNET, num_epochs, current_loss, current_optimizer = training_loop_UNET(resUNET, resUNET_optimizer, dataloader, num_epochs)
     checkpoint = {
     "epoch": num_epochs,
-    "generator_state_dict": resUNET.state_dict(),
+    "model_state_dict": resUNET.state_dict(),
     "optimizer_state_dict": current_optimizer.state_dict(),
     "loss": current_loss
 }
@@ -424,7 +457,7 @@ def init_GAN_model(in_channels = 1, discriminator_conv_channels = 32, discrimina
 def load_GAN_model(checkpoint_path, in_channels = 1, discriminator_conv_channels = 32, discriminator_depth = 5, lambda_recon = 100, lr = LR, betas = (0.5, 0.999), device = DEVICE):
     gan = init_GAN_model(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr, betas, device)
     checkpoint = torch.load(checkpoint_path, map_location=gan.device)
-    gan.load_state_dict(checkpoint["generator_state_dict"])  # key name kept from your save function
+    gan.load_state_dict(checkpoint["generator_state_dict"])
 
     # Only works if the checkpoint was saved with optimizer states (see step 2)
     if "optimizer_G_state_dict" in checkpoint:
@@ -434,7 +467,7 @@ def load_GAN_model(checkpoint_path, in_channels = 1, discriminator_conv_channels
         print("Warning: no optimizer state in checkpoint, Adam moments restart from zero.")
 
     prev_epochs = checkpoint.get("epoch", 0)
-    print(f"Loaded {checkpoint_path} (trained for {prev_epochs} epochs)")
+    print(f"Loaded Model: {checkpoint_path} (trained for {prev_epochs} epochs)")
     return gan, prev_epochs
 
 def training_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS):
@@ -481,6 +514,8 @@ def training_and_saving_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS, path = tra
     checkpoint = {
     "epoch": num_epochs,
     "generator_state_dict": gan.state_dict(),
+    "optimizer_G_state_dict": gan.opt_G.state_dict(),
+    "optimizer_D_state_dict": gan.opt_D.state_dict(),
     "loss_disc": loss["loss_disc"],
     "loss_gen": loss["loss_gen"],
     "loss_recon": loss["loss_recon"],
@@ -502,19 +537,24 @@ def main():
         visualize_data_distr(dataloader, visualization_file, visualization_file[:-4])
 
     if model == "UNET" or model == "unet":
-        unet, unet_optimizer = init_UNET_model(auto_normalization=True)
+        if NEW_MODEL:
+            unet, unet_optimizer = init_UNET_model(auto_normalization=True)
+        else:
+            unet, unet_optimizer, _ = load_UNET_model(predecessor_model)
         unet.train()
         training_and_saving_UNET_model(unet, unet_optimizer, dataloader)
     elif model == "resnet" or model == "ResNET" or model == "resunet" or model == "ResUNET":
-        resunet, resunet_optimizer = init_ResUNET_model()
+        if NEW_MODEL:
+            resunet, resunet_optimizer = init_ResUNET_model()
+        else:
+            resunet, resunet_optimizer, _ = load_ResUNET_model(predecessor_model)
         resunet.train()
         training_and_saving_resUNET_model(resunet, resunet_optimizer, dataloader=dataloader)
     elif model == "GAN" or model == "gan":
-        # generator, generator_optimizer, discriminator, discriminator_optimizer = init_GAN_models()
-        # generator.train()
-        # discriminator.train()
-        # training_and_saving_GAN_model(generator, generator_optimizer, discriminator, discriminator_optimizer, dataloader, path=trained_model_name)
-        gan = init_GAN_model()
+        if NEW_MODEL:
+            gan = init_GAN_model()
+        else:
+            gan, _ = load_GAN_model(predecessor_model)
         gan.train()
         training_and_saving_GAN(gan, dataloader)
 
