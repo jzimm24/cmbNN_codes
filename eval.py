@@ -49,7 +49,7 @@ class UnknownFileStructureError(ValueError):
 # ---------------------------------------------------------------------------------------------------------------------------------
 
 def load_model(path: str = MODEL_FILE, device: str = DEVICE):
-    if "unet" in path or "UNET" in path or modelArchitecture == "UNET":
+    if  modelArchitecture == "UNET":
         model, _ = training.init_UNET_model()
         print("Loading Model of UNET-architecture.")
         model.to(device)
@@ -66,6 +66,11 @@ def load_model(path: str = MODEL_FILE, device: str = DEVICE):
         print("Loading Model of ResUNET-architecture.")  
         model.to(device)
         last_model_state = torch.load(path, map_location=device)
+
+        # print("path:", path)
+        # print("modelArchitecture:", modelArchitecture)
+        # print("keys:", list(last_model_state.keys()))
+
         model.load_state_dict(last_model_state["model_state_dict"])  
     else:
         print("Model path does not specify model architecture")
@@ -619,11 +624,11 @@ def main():
 
     data, _, _ = load_and_prep_eval_data(DATA_FILE)
 
-    visuals = True
-    metrics = False
+    visuals = False
+    metrics = True
     if visuals:
         print("Creating Figures.")
-        noisy, clean = load_random_sample(DATA_FILE, seed=11)
+        noisy, clean = load_random_samples(DATA_FILE, seed=11)
         make_figures([noisy, clean])
     if metrics:
         print("Calculating metrics.")

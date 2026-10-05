@@ -78,10 +78,10 @@ class eval_config(NamedTuple):
 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-    modelArchitecture = "GAN"
-    MODEL_FILE = "../models/gan_epoch_16.pth"       # has to be manually inserted because of added epoch info in model save state
-    DATA_FILE = "../data/100_128_single_centered_circle_varyingSize_maps.npz"
-    BASE_NAME = "gan_100_128_single_centered_circle_varyingSize_maps.npz"
+    modelArchitecture = "ResUNET"
+    MODEL_FILE = "../models/resUNET_realNoise128_10k_1WN_1f_3s_size30_2409_epoch_16.pth"       # has to be manually inserted because of added epoch info in model save state
+    DATA_FILE = "../data/realNoise128_10k_1WN_1f_3s_size30_2409.h5"
+    BASE_NAME = "resUNET_realNoise128_10k_1WN_1f_3s_size30_2409_epoch_16"
     OUTPUT_FILE = f"../outputs/{BASE_NAME}.png"
     EVAL_FILE = f"../outputs/{BASE_NAME}.txt"
 
@@ -89,12 +89,12 @@ class eval_config(NamedTuple):
     BATCH_SIZE = 32
 
 
-    IMG_SIZE = training_configs.IMG_DIM
+    IMG_SIZE = 128
     MAX_VAL = 1 # for psnr
     DATA_RANGE = [0, MAX_VAL]
 
     TITLE = OUTPUT_FILE
 
-    doc_path = "../outputs/docs/gan_100_128_single_centered_circle_varyingSize_maps.txt"
+    doc_path = "../outputs/docs/evaluation_resUNET_realNoise128_10k_1WN_1f_3s_size30_2409_epoch_16.txt"
 
 evaluation_configs = eval_config()
