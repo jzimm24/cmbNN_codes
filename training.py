@@ -231,6 +231,25 @@ def init_UNET_model(in_chanels: int = 1,
     return unet, unet_optimizer
 
 def load_UNET_model(checkpoint_path, in_channels = 1, out_chanels = 1, device = DEVICE, lr = LR, auto_normalization = True):
+    """
+    Loading a previously trained UNET model from its last checkpoint. The parameters need to match those 
+    of the model that is to be loaded.
+
+    Parameters
+    ----------
+    in_chanels (int): number of in_chanels before very first convolutional-layer
+    out_chanel (int): number of chanels returned after the deconder and the very final layer
+    device: device on which training is done
+    lr (float): learning rate
+    auto_normalization (boolean): determines model architecture. If True, Unet_normalization is loaded as the unet model.
+                                    See model.py
+
+    Returns
+    -------
+    unet:  unet model with weights, biases etc. identical to the model saved at checkpoint.
+    unet_optimizer: corresponding optimizer (also loaded from its checkpoint state).
+    prev_epochs: number of previous training epochs.
+    """
     print("Loading previously trained model.")
     unet, unet_optimizer = init_UNET_model(in_channels, out_chanels, device, lr, auto_normalization)
     checkpoint = torch.load(checkpoint_path, map_location=device)
@@ -312,7 +331,7 @@ def training_loop_UNET(unet, unet_optimizer, dataloader, num_epochs = NUM_EPOCHS
 
 def training_and_saving_UNET_model(unet, unet_optimizer, dataloader, num_epochs = NUM_EPOCHS, path = trained_model_name, prev_epochs = 0):
     """
-    Executes the previously defined training_loop_UNET and saves the state of the model (both of the generator and the optimizer)
+    Executes the previously defined training_loop_UNET and saves the state of the model
 
     Parameters
     ----------
@@ -345,8 +364,8 @@ def training_and_saving_UNET_model(unet, unet_optimizer, dataloader, num_epochs 
 
 # ResUNET--------------------------------------------------------------------------------------------------------------------------------------
 
-def init_ResUNET_model(in_chanels: int = 1,
-                out_chanels: int = 1,
+def init_ResUNET_model(in_channels: int = 1,
+                out_channels: int = 1,
                 device = DEVICE,
                 lr = LR):
     """
@@ -354,16 +373,37 @@ def init_ResUNET_model(in_chanels: int = 1,
 
     Parameters
     ----------
+    in_channels (int): number of in_chanels before the very first convolutional-layer of the first Res-block
+    out_channels (int): number of out_channels following the final convolutional layer.
+    device: device on which the model should be initialized (should be the same as where the training is to be done)
+    lr (float): learning rate for the model training
 
     Returns
     -------
+    resUNET: Full resUNET model
+    resUNET_optimizer: corresponding optimizer
     """
-    resUNET = models.ResUNET(in_chanels, out_chanels).to(device)
+    resUNET = models.ResUNET(in_channels, out_channels).to(device)
     resUNET_optimizer = torch.optim.Adam(resUNET.parameters(), lr=lr)
 
     return resUNET, resUNET_optimizer
 
 def load_ResUNET_model(checkpoint_path, in_channels = 1, out_chanels = 1, device = DEVICE, lr = LR):
+    """
+    Initializes a ResUNET model.
+
+    Parameters
+    ----------
+    in_channels (int): number of in_chanels before the very first convolutional-layer of the first Res-block
+    out_channels (int): number of out_channels following the final convolutional layer.
+    device: device on which the model should be initialized (should be the same as where the training is to be done)
+    lr (float): learning rate for the model training
+
+    Returns
+    -------
+    resUNET: Full resUNET model
+    resUNET_optimizer: corresponding optimizer
+    """
     resUNET, resUNET_optimizer = init_ResUNET_model(in_channels, out_chanels, device, lr)
     checkpoint = torch.load(checkpoint_path, map_location=device)
     resUNET.load_state_dict(checkpoint["model_state_dict"])
@@ -379,12 +419,20 @@ def load_ResUNET_model(checkpoint_path, in_channels = 1, out_chanels = 1, device
 
 def training_step_resUNET(images, ground_truths, resUNET, resUNET_optimizer):
     """
+    One training step for the ResUNET model consisting of one forward pass through a batch, a subsequent loss
+    calculation and a backwards pass.
 
     Parameters
     ----------
+    images (dataloader batch):
+    ground_truths (dataloader batch):
+    ResUNET (model): ResUNET model (should be initialized and in training mode)
+    unet_optimizer ():
 
     Returns
     -------
+    loss (float): current loss of the batch
+    resUNET_optimizer (): current state of the resUNET optimizer for updating network parameters
     """
     images = images.to(DEVICE)  # move input to GPU
     ground_truths = ground_truths.to(DEVICE)  # move target to GPU
@@ -404,13 +452,23 @@ def training_step_resUNET(images, ground_truths, resUNET, resUNET_optimizer):
 
 def training_loop_resUNET(resUNET, resUNET_optimizer, dataloader, num_epochs = NUM_EPOCHS):
     """
+    Works though the data for a given number of epochs. For doing so, it uses the previously defined training_step_resUNET.
+    The losses are only viusally diplayed once each epoch.
 
     Parameters
     ----------
 
+    resUNET (model): ResUNET model (should be initialized and in training mode).
+    resUNET_optimizer ():
+    dataloader (dataloader batch): data including both the images and their respective ground truth images.
+    num_epochs (int): number of epochs the train should run.
 
     Returns
     -------
+    resUNET: model state at end of training
+    num_epochs: number of completed training epochs
+    loss (float): average loss of the last epoch
+    current_optimizer (): current state of the ResUNET optimizer for updating network parameters
     """
     for epoch in range(num_epochs):
         print("##############")
@@ -420,18 +478,27 @@ def training_loop_resUNET(resUNET, resUNET_optimizer, dataloader, num_epochs = N
         for x, y in dataloader:
             current_loss, current_optimizer = training_step_resUNET(x, y, resUNET, resUNET_optimizer)
             running_loss += current_loss.item()
-        print("Loss: ", running_loss/len(dataloader))
+        loss = running_loss/len(dataloader)
+        print("Loss: ", loss)
 
-    return resUNET, num_epochs, current_loss, current_optimizer
+    return resUNET, num_epochs, loss, current_optimizer
 
 def training_and_saving_resUNET_model(resUNET, resUNET_optimizer, dataloader, num_epochs = NUM_EPOCHS, path = trained_model_name, prev_epochs = 0):
     """
+    Executes the previously defined training_loop_UNET and saves the state of the model
 
     Parameters
     ----------
+    resUNET (model): unet model (should be initialized and in training mode).
+    resUNET_optimizer ():
+    dataloader (dataloader batch): data including both the images and their respective ground truth images.
+    num_epochs (int): number of epochs the train should run.
+    path (str): filename of where to store the trained model checkpoint
+    prev_epochs(int): number of epochs the previously given ResUNET Model has already been trained for
 
     Returns
-    -------
+    ----------
+    None
     """
     print("############################")
     print("Training model:")
@@ -451,10 +518,45 @@ def training_and_saving_resUNET_model(resUNET, resUNET_optimizer, dataloader, nu
 # GAN -------------------------------------------------------------------------------------------------------------------------------------
 
 def init_GAN_model(in_channels = 1, discriminator_conv_channels = 32, discriminator_depth = 5, lambda_recon = 100, lr = LR, betas = (0.5, 0.999), device = DEVICE):
+    """
+    Initializes a GAN model (unrelated to nn.Module).
+
+    Parameters
+    ----------
+    in_channels (int): number of in_chanels before the very first convolutional-layer of the generator
+    discriminator_conv_channels (int): number of feature maps created in every downsampling step of the discriminator
+    discriminator_depth (int): number of convolution steps in the discriminator
+    lambda_recon (float): 
+    lr (float): learning rate for the model training for both the discriminator and generator
+    betas:
+    device:
+
+    Returns
+    -------
+    gan: untrained gan model. The optimizer is part of this gan class. This class does NOT inherit from nn.Module.
+    """
     gan = models.Gan(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr, betas, device)
     return gan
 
 def load_GAN_model(checkpoint_path, in_channels = 1, discriminator_conv_channels = 32, discriminator_depth = 5, lambda_recon = 100, lr = LR, betas = (0.5, 0.999), device = DEVICE):
+    """
+    Initializes a Gan model. Parameters have to match those of the loaded model.
+
+    Parameters
+    ----------
+    checkoint_path (str): file of the checkpoint holding model and optimizer parameter values of the previously trained model
+    in_channels (int): number of in_chanels before the very first convolutional-layer of the generator
+    discriminator_depth (int): number of convolution steps in the discriminator
+    lambda_recon (float): 
+    lr (float): learning rate for the model training for both the discriminator and generator
+    betas:
+    device:
+
+    Returns
+    -------
+    gan: Trained GAN model
+    prev_epochs(int): number of epochs the model has been trained
+    """
     gan = init_GAN_model(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr, betas, device)
     checkpoint = torch.load(checkpoint_path, map_location=gan.device)
     gan.load_state_dict(checkpoint["generator_state_dict"])
@@ -471,6 +573,22 @@ def load_GAN_model(checkpoint_path, in_channels = 1, discriminator_conv_channels
     return gan, prev_epochs
 
 def training_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS):
+    """
+    Works through the data for a given number of epochs. The losses are only viusally diplayed once each epoch.
+    The optimizer is part of the GAN class.
+
+    Parameters
+    ----------
+
+    GAN (model): GAN model (should be initialized and in training mode).
+    dataloader (): data
+    num_epochs (int): number of epochs the train should run.
+
+    Returns
+    -------
+    GAN: model state at end of training
+    loss_dict (float): Dictionary of 4 kind of calculated losses
+    """
     for epoch in range(num_epochs):
         print("##############")
         print("Epoch: ", epoch)
@@ -500,12 +618,19 @@ def training_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS):
 
 def training_and_saving_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS, path = trained_model_name, prev_epochs = 0):
     """
+    Function for training a GAN model. A checkpoint of the last model state is created and saved for later training and evaluation.
 
     Parameters
     ----------
+    GAN (model): GAN model (should be initialized and in training mode).
+    dataloader (): data
+    num_epochs (int): number of epochs the train should run.
+    path (str): filename for saving the trained model
+    prev_epochs (int): number of previous training epochs the model has gone through
 
     Returns
     -------
+    None
     """
     print("############################")
     print("Training model:")
@@ -530,12 +655,16 @@ def training_and_saving_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS, path = tra
 
 def main():
 
+    # Start timer for runtime calculation for documentation
     start_time = time.perf_counter()
 
+    # Load simulated data and normalize it. Wrap data in dataloader
     dataloader, _, _ = data_load_and_prep()
+    # Visuallize the value distribution of the data and present example images right before training
     if data_visualization:
         visualize_data_distr(dataloader, visualization_file, visualization_file[:-4])
 
+    # Select model architecture and built model (new or previously trained). Afterwards save checkpoint for later training or evaluation.
     if model == "UNET" or model == "unet":
         if NEW_MODEL:
             unet, unet_optimizer = init_UNET_model(auto_normalization=True)
@@ -562,8 +691,11 @@ def main():
         raise ModelArchitectureError(model)
     print("Done!")
 
+    # Calculate runtim
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
+    
+    # Write and save documentation of the traiing run
     functions.write_doc(run_type="training", runtime=elapsed_time, output_file=trained_model_name)
 
     return None
