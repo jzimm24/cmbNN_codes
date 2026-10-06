@@ -49,6 +49,20 @@ class UnknownFileStructureError(ValueError):
 # ---------------------------------------------------------------------------------------------------------------------------------
 
 def load_model(path: str = MODEL_FILE, device: str = DEVICE):
+    """
+        Function loads trained model for later evaluation. Model architecture is
+        determined by config.py variable and model parameters are taken from checkpoint file, therefor
+        the two models need to be identical.
+    
+        Parameters
+        ----------
+        path (str): file of the saved model with the checkpoint data
+        device:
+    
+        Returns
+        -------
+        model:
+        """
     if  modelArchitecture == "UNET":
         model, _ = training.init_UNET_model()
         print("Loading Model of UNET-architecture.")
@@ -82,6 +96,21 @@ def load_model(path: str = MODEL_FILE, device: str = DEVICE):
     return model
 
 def load_and_prep_eval_data(data_file, epsilon = 1e-8):
+    """
+        Function loads images and norms the data to fit [0, 1].
+    
+        Parameters
+        ----------
+        data_file: file of data
+        epsilon: small constant preventing division by zero in normalization
+    
+        Returns
+        -------
+        dataloader (dataloader):    image data wrapped in dataloader. Only the data for evaluation has been kept.
+                                    Propably final 5%-10%
+        data_eval_normalisationParas (list[list[floats]]): values necessary to denormalise the noisy data ([amplitude, minimum])
+        sol_eval_normalisationParas (list[list[floats]]): values necessary to denormalise the clean data ([amplitude, minimum])
+        """
     if 1-EVAL_SPLIT != training.TRAIN_SPLIT:
         print("TRAIN_SPLIT not consistently defined. Continuing with eval.TRAIN_SPLIT.")
     print("EVAL_SPLIT: ", EVAL_SPLIT)
