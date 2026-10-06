@@ -30,7 +30,7 @@ python training.py\
 -> set parameters in config.py\
 python eval.py\
 
-###Maps
+### Maps
 CMB maps and related source maps can be created with code inside maps.py to be used as Mock Data for NN training. The code currently offers the possibility of creating maps with random or fixed number of sources and random or fixed position and sizes. The sources can have a uniform profile or beta-profile. As noise white noise and/or gaussian noise can be added. The filetype of the data can be changed.
 
 ### Training
