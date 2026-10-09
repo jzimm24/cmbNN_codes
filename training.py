@@ -9,12 +9,12 @@ import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset
-
+from torch.utils.data import DataLoader, TensorDataset, Subset
 import functions as functions
 import models as models
 
 import config as config
+
 
 # ---------------------------------------------------------------------------------------------------------------------------------
 
@@ -35,6 +35,7 @@ LR = config.training_configs.LR
 IMG_DIM = config.training_configs.IMG_DIM
 DATA_FILE = config.training_configs.DATA_FILE
 TRAIN_SPLIT = config.training_configs.TRAIN_SPLIT
+EPOCH_TRAINING_FRAC = config.training_configs.EPOCH_TRAINING_FRAC
 
 NEW_MODEL = config.training_configs.NEW_MODEL
 predecessor_model = config.training_configs.predecessor_model
@@ -108,6 +109,30 @@ def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
     dataset = TensorDataset(data_tensor, sol_tensor)
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
     return dataloader, data_denorm_vals, sol_denorm_vals
+
+def make_subset_loader(dataloader, fraction=0.2):
+    """
+    Function returning new dataLoader of a random subset of the original dataloader.dataset (without replacement)
+    Parameters
+        ----------   
+    
+        Returns
+        -------
+    
+    """
+    print(f"Getting random data split from dataloader (fraction = {fraction})")
+    dataset = dataloader.dataset
+    n_max = max(1, int(round(fraction * len(dataset))))
+    indices = torch.randperm(len(dataset))[:n_max].tolist()
+    return DataLoader(
+        Subset(dataset, indices),
+        batch_size=dataloader.batch_size,
+        shuffle=True,
+        num_workers=dataloader.num_workers,
+        pin_memory=dataloader.pin_memory,
+        drop_last=dataloader.drop_last,
+        collate_fn=dataloader.collate_fn,
+    )
 
 def visualize_data_distr(data, outputfile, title, bin_width = 0.02, only_first_batch = True, top_bin_focus = False):
     """
@@ -572,7 +597,7 @@ def load_GAN_model(checkpoint_path, in_channels = 1, discriminator_conv_channels
     print(f"Loaded Model: {checkpoint_path} (trained for {prev_epochs} epochs)")
     return gan, prev_epochs
 
-def training_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS):
+def training_GAN(GAN, dataloader, data_fraction = EPOCH_TRAINING_FRAC, num_epochs = NUM_EPOCHS):
     """
     Works through the data for a given number of epochs. The losses are only viusally diplayed once each epoch.
     The optimizer is part of the GAN class.
@@ -593,11 +618,14 @@ def training_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS):
         print("##############")
         print("Epoch: ", epoch)
         print("##############")
+
+        epoch_loader = make_subset_loader(dataloader=dataloader, fraction=data_fraction)
+
         running_loss_D = 0
         running_loss_G = 0
         running_loss_adv = 0
         running_loss_recon = 0
-        for x, y in dataloader:
+        for x, y in epoch_loader:
             x = x.to(GAN.device)
             y = y.to(GAN.device)
             current_loss_dict = GAN.training_step(x, y)
@@ -605,10 +633,10 @@ def training_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS):
             running_loss_G += current_loss_dict["loss_G"]
             running_loss_recon += current_loss_dict["loss_recon"]
             running_loss_adv += current_loss_dict["loss_adv"]
-        print("discriminator Loss: ", running_loss_D/len(dataloader))
-        print("generator loss:", running_loss_G/len(dataloader))
-        print("reconstruction loss:", running_loss_recon/len(dataloader))
-        print("adversarial loss:", running_loss_adv/len(dataloader))
+        print("discriminator Loss: ", running_loss_D/len(epoch_loader))
+        print("generator loss:", running_loss_G/len(epoch_loader))
+        print("reconstruction loss:", running_loss_recon/len(epoch_loader))
+        print("adversarial loss:", running_loss_adv/len(epoch_loader))
         loss_dict = {"loss_disc": running_loss_D,
                      "loss_gen": running_loss_G,
                      "loss_recon": running_loss_recon,
@@ -616,7 +644,7 @@ def training_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS):
 
     return GAN, loss_dict
 
-def training_and_saving_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS, path = trained_model_name, prev_epochs = 0):
+def training_and_saving_GAN(GAN, dataloader, data_fraction = EPOCH_TRAINING_FRAC, num_epochs = NUM_EPOCHS, path = trained_model_name, prev_epochs = 0):
     """
     Function for training a GAN model. A checkpoint of the last model state is created and saved for later training and evaluation.
 
@@ -635,7 +663,7 @@ def training_and_saving_GAN(GAN, dataloader, num_epochs = NUM_EPOCHS, path = tra
     print("############################")
     print("Training model:")
     print("############################")
-    gan, loss = training_GAN(GAN, dataloader, num_epochs)
+    gan, loss = training_GAN(GAN, dataloader, data_fraction, num_epochs)
     checkpoint = {
     "epoch": num_epochs,
     "generator_state_dict": gan.state_dict(),

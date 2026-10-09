@@ -60,6 +60,7 @@ class training_config(NamedTuple):
     IMG_DIM = 128                                          # size of maps in data
     DATA_FILE = "../data/realNoise128_10k_1WN_1f_3s_size30_2409.h5"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
+    EPOCH_TRAINING_FRAC = 0.2                               # relative amount of data in training split used in each epoch
     NEW_MODEL = True
     predecessor_model = ""
     trained_model_name = "../models/UNET_realNoise128_10k_1WN_1f_3s_size30_2409.pth"   # name of the trained model
