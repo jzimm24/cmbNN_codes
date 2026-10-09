@@ -13,7 +13,7 @@ class maps_config(NamedTuple):
     save_mode = "hdf5"      # responsible for data type (choose 'hdf5' or 'csv')
     flux_mode = "gauss"     # 'lin', 'log', or 'gauss' fluxes
 
-    num_images = 10000      # number of maps created
+    num_images = 30000      # number of maps created
     image_size = 128        # size of square map
     max_source_number = 4   # maximum number of sources (uniform random distr. for all number of sources below max)
 
@@ -38,11 +38,11 @@ class maps_config(NamedTuple):
     gaussian_smoothing_fwhm  = 1.0        # if >0, smooth final image with this FWHM   --> DEFAULT 5 PIXELS
 
 
-    output_h5               = '../data/realNoise128_10k_1WN_1f_3s_size30_2409.h5'
+    output_h5               = '../data/realNoise128_30k_1WN_1f_3s_size30_0910.h5'
 
-    doc_path = "../outputs/docs/realNoise128_10k_1WN_1f_3s_size30_2409.txt"
+    doc_path = "../outputs/docs/realNoise128_30k_1WN_1f_3s_size30_0910.txt"
 
-    visualization_path = "../outputs/realNoise128_10k_1WN_1f_3s_size30_2409.png"
+    visualization_path = "../outputs/realNoise128_30k_1WN_1f_3s_size30_0910.png"
 
 maps_configs = maps_config()
 
@@ -52,22 +52,22 @@ maps_configs = maps_config()
 
 class training_config(NamedTuple):
     #class setting all necessary parameters for running training.py
-    model: str = "UNET"                                     # model architecture (choose gan or unet) 
+    model: str = "GAN"                                     # model architecture (choose gan or unet) 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # checks available devices automatically (prefered gpu)
-    NUM_EPOCHS = 16                                       # number of epochs in training
-    BATCH_SIZE = 16                                         # batch size
+    NUM_EPOCHS = 8                                       # number of epochs in training
+    BATCH_SIZE = 8                                         # batch size
     LR = 5e-4                                               # learning rate
     IMG_DIM = 128                                          # size of maps in data
-    DATA_FILE = "../data/realNoise128_10k_1WN_1f_3s_size30_2409.h5"   # data file storing images
+    DATA_FILE = "../data/realNoise128_30k_1WN_1f_3s_size30_0910.h5"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
-    EPOCH_TRAINING_FRAC = 0.2                               # relative amount of data in training split used in each epoch
+    EPOCH_TRAINING_FRAC = 1                               # relative amount of data in training split used in each epoch
     NEW_MODEL = True
     predecessor_model = ""
-    trained_model_name = "../models/UNET_realNoise128_10k_1WN_1f_3s_size30_2409.pth"   # name of the trained model
+    trained_model_name = "../models/GAN_realNoise128_30k_1WN_1f_3s_size30_0910.pth"   # name of the trained model
     crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
-    doc_path = "../outputs/docs/training_UNET_realNoise128_10k_1WN_1f_3s_size30_2409.txt"   # path for documentation file of the run
+    doc_path = "../outputs/docs/training_GAN_realNoise128_30k_1WN_1f_3s_size30_0910.txt"   # path for documentation file of the run
     visualization = False                                   # should the value distribution of the data + some example maps of the dataset be visualized
-    visualization_file = "../outputs/UNET_realNoise128_10k_1WN_1f_3s_size30_2409.png" # path for visualisation diagrams
+    visualization_file = "../outputs/GAN_realNoise128_30k_1WN_1f_3s_size30_0910.png" # path for visualisation diagrams
 
 training_configs = training_config()
 
