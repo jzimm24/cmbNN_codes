@@ -55,17 +55,17 @@ class training_config(NamedTuple):
     model: str = "GAN"                                     # model architecture (choose gan or unet) 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # checks available devices automatically (prefered gpu)
     NUM_EPOCHS = 8                                       # number of epochs in training
-    BATCH_SIZE = 8                                         # batch size
+    BATCH_SIZE = 16                                         # batch size
     LR = 5e-4                                               # learning rate
     IMG_DIM = 128                                          # size of maps in data
     DATA_FILE = "../data/realNoise128_30k_1WN_1f_3s_size30_0910.h5"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
     EPOCH_TRAINING_FRAC = 1                               # relative amount of data in training split used in each epoch
-    NEW_MODEL = True
-    predecessor_model = ""
+    NEW_MODEL = False
+    predecessor_model = "../models/GAN_realNoise128_30k_1WN_1f_3s_size30_0910_epoch_8.pth"
     trained_model_name = "../models/GAN_realNoise128_30k_1WN_1f_3s_size30_0910.pth"   # name of the trained model
     crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
-    doc_path = "../outputs/docs/training_GAN_realNoise128_30k_1WN_1f_3s_size30_0910.txt"   # path for documentation file of the run
+    doc_path = "../outputs/docs/training_GAN_realNoise128_30k_1WN_1f_3s_size30_0910_e8to16.txt"   # path for documentation file of the run
     visualization = False                                   # should the value distribution of the data + some example maps of the dataset be visualized
     visualization_file = "../outputs/GAN_realNoise128_30k_1WN_1f_3s_size30_0910.png" # path for visualisation diagrams
 
@@ -79,10 +79,10 @@ class eval_config(NamedTuple):
 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-    modelArchitecture = "ResUNET"
-    MODEL_FILE = "../models/resUNET_realNoise128_10k_1WN_1f_3s_size30_2409_epoch_16.pth"       # has to be manually inserted because of added epoch info in model save state
+    modelArchitecture = "UNET"
+    MODEL_FILE = "../models/UNET_realNoise128_10k_1WN_1f_3s_size30_2409.pth_epoch_16.pth"       # has to be manually inserted because of added epoch info in model save state
     DATA_FILE = "../data/realNoise128_10k_1WN_1f_3s_size30_2409.h5"
-    BASE_NAME = "resUNET_realNoise128_10k_1WN_1f_3s_size30_2409_epoch_16"
+    BASE_NAME = "UNET_realNoise128_10k_1WN_1f_3s_size30_2409.pth_epoch_16"
     OUTPUT_FILE = f"../outputs/{BASE_NAME}.png"
     EVAL_FILE = f"../outputs/{BASE_NAME}.txt"
 
@@ -96,6 +96,6 @@ class eval_config(NamedTuple):
 
     TITLE = OUTPUT_FILE
 
-    doc_path = "../outputs/docs/evaluation_resUNET_realNoise128_10k_1WN_1f_3s_size30_2409_epoch_16.txt"
+    doc_path = "../outputs/docs/evaluation_UNET_realNoise128_10k_1WN_1f_3s_size30_2409.pth_epoch_16txt"
 
 evaluation_configs = eval_config()

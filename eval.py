@@ -142,7 +142,7 @@ def load_and_prep_eval_data(data_file, epsilon = 1e-8):
     return dataloader, data_eval_normalisationParas, sol_eval_normalisationParas
 
 def load_random_samples(path: str, n = 1, seed=42, epsilon=1e-8):
-    dataloader, data_paras, sol_paras = eval.load_and_prep_eval_data(path, epsilon)
+    dataloader, data_paras, sol_paras = load_and_prep_eval_data(path, epsilon)
 
     dataset = dataloader.dataset          # TensorDataset of (noisy, clean) pairs
 
@@ -568,12 +568,11 @@ def main():
 
     data, _, _ = load_and_prep_eval_data(DATA_FILE)
 
-    visuals = False
+    visuals = True
     metrics = True
     if visuals:
         print("Creating Figures.")
-        noisy, clean = load_random_samples(DATA_FILE, seed=11)
-        make_figures([noisy, clean])
+        make_figures(model = model, n = 3)
     if metrics:
         print("Calculating metrics.")
 
