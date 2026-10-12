@@ -710,10 +710,11 @@ def main():
     elif model == "GAN" or model == "gan":
         if NEW_MODEL:
             gan = init_GAN_model()
+            previous_epochs = 0
         else:
-            gan, _ = load_GAN_model(predecessor_model)
+            gan, previous_epochs = load_GAN_model(predecessor_model)
         gan.train()
-        training_and_saving_GAN(gan, dataloader)
+        training_and_saving_GAN(gan, dataloader, prev_epochs=previous_epochs)
 
     else:
         raise ModelArchitectureError(model)
