@@ -32,6 +32,8 @@ DEVICE = config.training_configs.DEVICE
 NUM_EPOCHS = config.training_configs.NUM_EPOCHS
 BATCH_SIZE = config.training_configs.BATCH_SIZE
 LR = config.training_configs.LR
+LR_gen = LR
+LR_disc = config.training_configs.LR_disc
 IMG_DIM = config.training_configs.IMG_DIM
 DATA_FILE = config.training_configs.DATA_FILE
 TRAIN_SPLIT = config.training_configs.TRAIN_SPLIT
@@ -542,7 +544,7 @@ def training_and_saving_resUNET_model(resUNET, resUNET_optimizer, dataloader, nu
 
 # GAN -------------------------------------------------------------------------------------------------------------------------------------
 
-def init_GAN_model(in_channels = 1, discriminator_conv_channels = 32, discriminator_depth = 5, lambda_recon = 100, lr = LR, betas = (0.5, 0.999), device = DEVICE):
+def init_GAN_model(in_channels = 1, discriminator_conv_channels = 32, discriminator_depth = 5, lambda_recon = 100, lr_gen = LR_gen, lr_disc = LR_disc, betas = (0.5, 0.999), device = DEVICE):
     """
     Initializes a GAN model (unrelated to nn.Module).
 
@@ -560,10 +562,10 @@ def init_GAN_model(in_channels = 1, discriminator_conv_channels = 32, discrimina
     -------
     gan: untrained gan model. The optimizer is part of this gan class. This class does NOT inherit from nn.Module.
     """
-    gan = models.Gan(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr, betas, device)
+    gan = models.Gan(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr_gen, lr_disc, betas, device)
     return gan
 
-def load_GAN_model(checkpoint_path, in_channels = 1, discriminator_conv_channels = 32, discriminator_depth = 5, lambda_recon = 100, lr = LR, betas = (0.5, 0.999), device = DEVICE):
+def load_GAN_model(checkpoint_path, in_channels = 1, discriminator_conv_channels = 32, discriminator_depth = 5, lambda_recon = 100, lr_gen = LR_gen, lr_disc = LR_disc, betas = (0.5, 0.999), device = DEVICE):
     """
     Initializes a Gan model. Parameters have to match those of the loaded model.
 
@@ -582,7 +584,7 @@ def load_GAN_model(checkpoint_path, in_channels = 1, discriminator_conv_channels
     gan: Trained GAN model
     prev_epochs(int): number of epochs the model has been trained
     """
-    gan = init_GAN_model(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr, betas, device)
+    gan = init_GAN_model(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr_gen, lr_disc, betas, device)
     checkpoint = torch.load(checkpoint_path, map_location=gan.device)
     gan.load_state_dict(checkpoint["generator_state_dict"])
 

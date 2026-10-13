@@ -253,7 +253,7 @@ class PairClassifier(nn.Module):
     
 class Gan():
     def __init__(self, in_channels=1, discriminator_conv_channels = 32, 
-                 discriminator_depth = 5, lambda_recon = 100.0, lr = 2e-4, betas = (0.5, 0.999), device = None):
+                 discriminator_depth = 5, lambda_recon = 100.0, lr_generator = 2e-4, lr_discriminator = 2e-5, betas = (0.5, 0.999), device = None):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
         self.generator = UNET(in_channels, in_channels).to(self.device)
@@ -264,8 +264,8 @@ class Gan():
         self.recon_loss_fn = nn.L1Loss()
         self.adv_loss_fn = nn.BCEWithLogitsLoss()
 
-        self.opt_G = torch.optim.Adam(self.generator.parameters(), lr=lr, betas=betas)
-        self.opt_D = torch.optim.Adam(self.discriminator.parameters(), lr=lr, betas=betas)
+        self.opt_G = torch.optim.Adam(self.generator.parameters(), lr=lr_generator, betas=betas)
+        self.opt_D = torch.optim.Adam(self.discriminator.parameters(), lr=lr_discriminator, betas=betas)
 
     def training_step(self, noisy_imgs, groundtruth_imgs):
         real_label = torch.ones(noisy_imgs.size(0), 1, device=self.device)
