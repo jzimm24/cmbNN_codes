@@ -62,9 +62,9 @@ class training_config(NamedTuple):
     DATA_FILE = "../data/realNoise128_30k_1WN_1f_3s_size30_0910.h5"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
     EPOCH_TRAINING_FRAC = 1                               # relative amount of data in training split used in each epoch
-    NEW_MODEL = True
-    predecessor_model = ""
-    trained_model_name = "../models/GAN_lrGen0005_lrDisc00005_realNoise128_30k_1WN_1f_3s_size30_0910.pth"   # name of the trained model
+    NEW_MODEL = False
+    predecessor_model = "../models/GAN_lrGen0005_lrDisc00005_realNoise128_30k_1WN_1f_3s_size30_0910_epoch_8.pth"
+    trained_model_name = "../models/GAN_lrGen0005_lrDisc00005_realNoise128_30k_1WN_1f_3s_size30_0910"   # name of the trained model
     crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
     doc_path = "../outputs/docs/training_GAN_lrGen0005_lrDisc00005_realNoise128_30k_1WN_1f_3s_size30_0910.txt"   # path for documentation file of the run
     visualization = False                                   # should the value distribution of the data + some example maps of the dataset be visualized
