@@ -63,6 +63,9 @@ def load_model(path: str = MODEL_FILE, device: str = DEVICE):
         -------
         model:
         """
+
+    denorm_vals_noisy = None
+    denorm_vals_sol = None
     if  modelArchitecture == "UNET":
         model, _ = training.init_UNET_model()
         print("Loading Model of UNET-architecture.")
@@ -75,6 +78,8 @@ def load_model(path: str = MODEL_FILE, device: str = DEVICE):
         model.to(device)
         last_model_state = torch.load(path, map_location=device)
         model.load_state_dict(last_model_state["generator_state_dict"])
+        denorm_vals_noisy = last_model_state["denorm_vals_noisy"]
+        denorm_vals_sol = last_model_state["denorm_vals_sol"]
     elif "resnet" in path or modelArchitecture == "ResUNET":
         model, _ = training.init_ResUNET_model()
         print("Loading Model of ResUNET-architecture.")  
@@ -93,7 +98,7 @@ def load_model(path: str = MODEL_FILE, device: str = DEVICE):
         model = model.generator
     print("Model loaded!")
 
-    return model
+    return model, denorm_vals_noisy, denorm_vals_sol
 
 def load_and_prep_eval_data(data_file, epsilon = 1e-8):
     """
@@ -368,7 +373,7 @@ def eval_power_spectrum(model = None, data = None, model_path = None, data_file 
         if data_file is None:
             raise DataAccessibilityError()
         else:
-            dataloader, _, _ = load_and_prep_eval_data(data_file)
+            dataloader, noisy_denorm_paras, clean_denorm_paras = load_and_prep_eval_data(data_file)
     else:
         dataloader = data
 
@@ -568,8 +573,8 @@ def main():
 
     data, _, _ = load_and_prep_eval_data(DATA_FILE)
 
-    visuals = True
-    metrics = True
+    visuals = False
+    metrics = False
     if visuals:
         print("Creating Figures.")
         make_figures(model = model, n = 3)

@@ -31,12 +31,21 @@ def normalize_data(data, epsilon = 1e-8):
     amp = data_max - data_min + epsilon
     return data, amp, data_min
 
+def normalize_data_gloabally(data, epsilon = 1e-8):
+     return None
+
 def normalize_map(map, epsilon = 1e-8):
     map_min = map.min()
     map_max = map.max()
     map = (map - map_min) / (map_max - map_min + epsilon)
     amp = map_max - map_min + epsilon
     return map, amp, map_min
+
+def denormalize_map():
+     return None
+
+def denormalize_data_globally():
+     return None
 
 def radial_bin_indices(nx, ny):
     x, y = np.indices((nx, ny))
@@ -83,6 +92,23 @@ def write_doc(run_type: str,
             "output_h5": config.maps_configs.output_h5
         }
         doc_path = config.maps_configs.doc_path
+
+    elif run_type == "cmb_map_creation":
+    
+            config_vars = {
+                "run_type": run_type,
+                "number_maps": config.cmbMaps_configs.number_maps,
+                "map_size": config.cmbMaps_configs.map_size_arc,
+                "pixel_size": config.cmbMaps_configs.pixel_size_arc,
+                "cosmology": config.cmbMaps_configs.cosmology,
+                "powerSpectrum": config.cmbMaps_configs.powerSpectrum,
+                "white_Noise_amplitude": config.cmbMaps_configs.white_Noise_amplitude,
+                "l_max": config.cmbMaps_configs.l_max,
+                "beam_width": config.cmbMaps_configs.beam_width,
+                "h5_filename": config.cmbMaps_configs.h5_filename,
+                "seed": config.cmbMaps_configs.seed
+            }
+            doc_path = config.cmbMaps_configs.doc_path
 
     elif run_type == "training":
 

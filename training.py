@@ -63,23 +63,24 @@ def log_memory_usage():
         print(f"Memry used: CPU")
     return None
 
-def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
+def data_load_and_prep(data_file=DATA_FILE, epsilon=1e-8):
     """
     Loads data from given Datafile.
     Prepares the data for training.
-        - normalize data to only include values between [0, 1]
+        - normalizes data globally to [0, 1], using one (min, amplitude) pair
+          computed over the whole training set (not per map)
     Builds dataloader.
 
     Parameters
     ----------
     data_file (str): path to data
-    epsilon(int) : constant needed in normalization to avoid null divisions.
+    epsilon (float): constant added to the amplitude to avoid division by zero.
 
     Returns
     -------
     dataloader (dataloader): data ready for training
-    data_denorm_vals (array): array of tuples holding values necessary for denormalizing noisy maps after training
-    sol_denorm_vals (array): array of tuples holding values necessary for denormalizing corresponding ground truth maps after training
+    data_denorm_vals (tuple): (min, amplitude) scalars for denormalizing noisy maps
+    sol_denorm_vals (tuple): (min, amplitude) scalars for denormalizing ground truth maps
     """
     if data_file[-3:] == "npz":
         data, sol, paras = functions.load_npz(data_file)
@@ -91,20 +92,26 @@ def data_load_and_prep(data_file = DATA_FILE, epsilon = 1e-8):
         raise DataFileFormatError(data_file[-5])
     print("Full path: ", data_file)
 
-
     n_total = data.shape[0]
     print("total images: ", n_total)
-    n_train = int(TRAIN_SPLIT*n_total)
+    n_train = int(TRAIN_SPLIT * n_total)
     print("training images: ", n_train)
-
-    data, amp_vals_noisy, min_vals_noisy = functions.normalize_data(data, epsilon=epsilon)
-    data_denorm_vals = (min_vals_noisy, amp_vals_noisy)
-
-    sol, amp_vals_clean, min_vals_clean = functions.normalize_data(sol, epsilon=epsilon)
-    sol_denorm_vals = (min_vals_clean, amp_vals_clean)
 
     data_train = data[:n_train]
     sol_train = sol[:n_train]
+
+    # Global statistics from the training split only
+    data_min = float(data_train.min())
+    data_amp = float(data_train.max() - data_min) + epsilon
+    sol_min = float(sol_train.min())
+    sol_amp = float(sol_train.max() - sol_min) + epsilon
+
+    data_denorm_vals = (data_min, data_amp)
+    sol_denorm_vals = (sol_min, sol_amp)
+
+    # Same constants for every map
+    data_train = (data_train - data_min) / data_amp
+    sol_train = (sol_train - sol_min) / sol_amp
 
     data_tensor = torch.from_numpy(data_train).float().unsqueeze(1)
     sol_tensor = torch.from_numpy(sol_train).float().unsqueeze(1)
@@ -588,6 +595,9 @@ def load_GAN_model(checkpoint_path, in_channels = 1, discriminator_conv_channels
     checkpoint = torch.load(checkpoint_path, map_location=gan.device)
     gan.load_state_dict(checkpoint["generator_state_dict"])
 
+    denorm_vals_noisy = checkpoint["denorm_vals_noisy"]
+    denorm_vals_sol = checkpoint["denorm_vals_sol"]
+
     # Only works if the checkpoint was saved with optimizer states (see step 2)
     if "optimizer_G_state_dict" in checkpoint:
         gan.opt_G.load_state_dict(checkpoint["optimizer_G_state_dict"])
@@ -597,9 +607,9 @@ def load_GAN_model(checkpoint_path, in_channels = 1, discriminator_conv_channels
 
     prev_epochs = checkpoint.get("epoch", 0)
     print(f"Loaded Model: {checkpoint_path} (trained for {prev_epochs} epochs)")
-    return gan, prev_epochs
+    return gan, prev_epochs, [denorm_vals_noisy, denorm_vals_sol]
 
-def training_GAN(GAN, dataloader, data_fraction = EPOCH_TRAINING_FRAC, num_epochs = NUM_EPOCHS):
+def training_GAN(GAN, data, data_fraction = EPOCH_TRAINING_FRAC, num_epochs = NUM_EPOCHS):
     """
     Works through the data for a given number of epochs. The losses are only viusally diplayed once each epoch.
     The optimizer is part of the GAN class.
@@ -608,7 +618,7 @@ def training_GAN(GAN, dataloader, data_fraction = EPOCH_TRAINING_FRAC, num_epoch
     ----------
 
     GAN (model): GAN model (should be initialized and in training mode).
-    dataloader (): data
+    data (list): list of dataloader, denorm values for noisy images, denorm values for clean images
     num_epochs (int): number of epochs the train should run.
 
     Returns
@@ -616,6 +626,9 @@ def training_GAN(GAN, dataloader, data_fraction = EPOCH_TRAINING_FRAC, num_epoch
     GAN: model state at end of training
     loss_dict (float): Dictionary of 4 kind of calculated losses
     """
+
+    dataloader, denorm_vals_noisy, denorm_vals_sol = data
+
     for epoch in range(num_epochs):
         print("##############")
         print("Epoch: ", epoch)
@@ -644,16 +657,16 @@ def training_GAN(GAN, dataloader, data_fraction = EPOCH_TRAINING_FRAC, num_epoch
                      "loss_recon": running_loss_recon,
                      "loss_adv": running_loss_adv}
 
-    return GAN, loss_dict
+    return GAN, loss_dict, denorm_vals_noisy, denorm_vals_sol
 
-def training_and_saving_GAN(GAN, dataloader, data_fraction = EPOCH_TRAINING_FRAC, num_epochs = NUM_EPOCHS, path = trained_model_name, prev_epochs = 0):
+def training_and_saving_GAN(GAN, data, data_fraction = EPOCH_TRAINING_FRAC, num_epochs = NUM_EPOCHS, path = trained_model_name, prev_epochs = 0):
     """
     Function for training a GAN model. A checkpoint of the last model state is created and saved for later training and evaluation.
 
     Parameters
     ----------
     GAN (model): GAN model (should be initialized and in training mode).
-    dataloader (): data
+    data (list): list of dataloader, denorm values for noisy images, denorm values for clean images
     num_epochs (int): number of epochs the train should run.
     path (str): filename for saving the trained model
     prev_epochs (int): number of previous training epochs the model has gone through
@@ -665,7 +678,7 @@ def training_and_saving_GAN(GAN, dataloader, data_fraction = EPOCH_TRAINING_FRAC
     print("############################")
     print("Training model:")
     print("############################")
-    gan, loss = training_GAN(GAN, dataloader, data_fraction, num_epochs)
+    gan, loss, denorm_vals_noisy, denorm_vals_sol = training_GAN(GAN, data, data_fraction, num_epochs)
     checkpoint = {
     "epoch": num_epochs,
     "generator_state_dict": gan.state_dict(),
@@ -674,7 +687,9 @@ def training_and_saving_GAN(GAN, dataloader, data_fraction = EPOCH_TRAINING_FRAC
     "loss_disc": loss["loss_disc"],
     "loss_gen": loss["loss_gen"],
     "loss_recon": loss["loss_recon"],
-    "loss_adv": loss["loss_adv"]
+    "loss_adv": loss["loss_adv"],
+    "denorm_vals_noisy": denorm_vals_noisy,
+    "denorm_vals_sol": denorm_vals_sol
     }
     print("Saving model(GAN) at: ", path)
     torch.save(checkpoint, f"{path}_epoch_{num_epochs+prev_epochs}.pth")
@@ -689,7 +704,8 @@ def main():
     start_time = time.perf_counter()
 
     # Load simulated data and normalize it. Wrap data in dataloader
-    dataloader, _, _ = data_load_and_prep()
+    data = data_load_and_prep()
+    dataloader, denorm_vals_noisy, denorm_vals_sol = data
     # Visuallize the value distribution of the data and present example images right before training
     if data_visualization:
         visualize_data_distr(dataloader, visualization_file, visualization_file[:-4])
@@ -714,9 +730,9 @@ def main():
             gan = init_GAN_model()
             previous_epochs = 0
         else:
-            gan, previous_epochs = load_GAN_model(predecessor_model)
+            gan, previous_epochs, denorm_vals = load_GAN_model(predecessor_model)
         gan.train()
-        training_and_saving_GAN(gan, dataloader, prev_epochs=previous_epochs)
+        training_and_saving_GAN(gan, data, prev_epochs=previous_epochs)
 
     else:
         raise ModelArchitectureError(model)

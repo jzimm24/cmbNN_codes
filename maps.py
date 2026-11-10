@@ -6,6 +6,10 @@ from datetime import datetime
 import time
 import torch
 
+import camb
+import h5py
+from torch.utils.data import DataLoader, TensorDataset
+
 import functions as functions
 
 import config as config
@@ -249,6 +253,7 @@ def save_maps(maps, ground_truths, doc, file_name: str = "circle_maps"):
     return None
 
 # real noise map functions -----------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------------
 
 # Original code taken from Dr. Kaustuv Basu. Expanded to include randomization of source position and source number.
 
@@ -942,6 +947,220 @@ def visualize_maps(datafile, save_path, n: int = 1, ground_truth: bool = True):
 
     return None
 
+# CMB map creation -----------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------------
+
+n_maps = config.cmbMaps_configs.number_maps
+map_size = config.cmbMaps_configs.map_size_arc
+pixel_size = config.cmbMaps_configs.pixel_size_arc
+cosmology = config.cmbMaps_configs.cosmology
+l_max = config.cmbMaps_configs.l_max
+beam_width = config.cmbMaps_configs.beam_width
+white_noise = config.cmbMaps_configs.white_Noise_amplitude
+powerSpectrum_TT = config.cmbMaps_configs.powerSpectrum
+seed = config.cmbMaps_configs.seed
+filename = config.cmbMaps_configs.h5_filename
+
+
+class CMB_map_maker():
+    """
+    
+    """
+    def __init__(self, n_maps = n_maps, map_size = map_size, pixel_size = pixel_size, cosmology = cosmology, l_max = l_max, beam_width = beam_width, 
+                 white_noise = white_noise, powerSpectrum_TT = powerSpectrum_TT, seed = seed, filename = filename):
+        self.n_maps = n_maps
+        
+        self.map_size = map_size
+        self.pixel_size = pixel_size
+        
+        self.n_pixel = None
+        self.pixel_size_rad = None
+
+        self.fourier_grid = None
+
+        self.cosmology = cosmology
+        self.l_max = l_max
+
+        self.powerSpectrum_TT = powerSpectrum_TT
+        self.powerSpectrum_TT_clipped = None
+        self.powerSpectrum_TT_clipped_normalised_2d = None
+
+        self.beam_width = beam_width
+        self.beam = 0
+        self.white_noise = white_noise
+
+        self.seed = seed
+
+        self.filename = filename
+
+        self.set_map_parameters()
+        self._built_fourier_grid()
+
+        self.noisy = np.empty((self.n_maps, self.n_pixel, self.n_pixel), dtype = np.float32)
+        self.clean = np.empty((self.n_maps, self.n_pixel, self.n_pixel), dtype = np.float32)
+
+        self.print_parameters()
+    
+        return None
+
+    def print_parameters(self):
+        print("CMB_map_maker parameters:")
+        print(f"  n_maps      : {self.n_maps}")
+        print(f"  map_size    : {self.map_size} arcmin")
+        print(f"  pixel_size  : {self.pixel_size} arcmin")
+        print(f"  n_pixel     : {self.n_pixel}")
+        print(f"  l_max       : {self.l_max}")
+        print(f"  cosmology   : {self.cosmology}")
+        print(f"  beam_width  : {self.beam_width} arcmin (FWHM)")
+        print(f"  white_noise : {self.white_noise} muK-arcmin")
+        print(f"  filename    : {self.filename}")
+        return None
+
+    def _built_fourier_grid(self):
+            freq = np.fft.fftfreq(self.n_pixel, d=self.pixel_size_rad)
+            kx, ky = np.meshgrid(freq, freq)
+            self.fourier_grid = 2 * np.pi * np.hypot(kx, ky)
+            return None
+
+    def set_map_parameters(self, map_size = None, pixel_size = None):
+        if map_size:
+            self.map_size = map_size
+        if pixel_size:
+            self.pixel_size = pixel_size
+        self.pixel_size_rad = np.deg2rad(self.pixel_size / 60.0)
+        self.n_pixel = int(round(self.map_size/self.pixel_size))
+        self._built_fourier_grid()
+        return None
+        
+    def create_powerSpectrum(self, cosmology = None):
+        print("Creating power spectrum:")
+        if cosmology:
+            print("Checking cosmology.")
+            self.cosmology = cosmology
+        assert self.cosmology is not None
+
+        cosmo_dict = dict(self.cosmology)
+        params = camb.set_params(
+                H0=cosmo_dict["H0"], ombh2=cosmo_dict["ombh2"], omch2=cosmo_dict["omch2"],
+                tau=cosmo_dict["tau"], As=np.exp(cosmo_dict["ln1e10As"]) * 1e-10, ns=cosmo_dict["ns"],
+                mnu=cosmo_dict["mnu"], omk=0, lmax=self.l_max, lens_potential_accuracy=1,
+            )
+        results = camb.get_results(params)
+        powerSpectrum_TT = results.get_cmb_power_spectra(params, CMB_unit="muK", raw_cl=True)
+        self.powerSpectrum_TT = powerSpectrum_TT["total"][:self.l_max + 1, 0]
+        print("Power spectrum created.")
+        return self.powerSpectrum_TT
+
+    def _clip_powerSpectrum(self):
+        print("Clipping power spectrum:")
+        self.powerSpectrum_TT_clipped = np.clip(self.powerSpectrum_TT, 0.0, None)
+        print("Power spectrum clipped.")
+        return None
+
+    def _write_powerSpectrum_in_fourierSpace(self):
+        powerSpectrum_TT_clipped_2d = np.interp(self.fourier_grid, np.arange(self.powerSpectrum_TT_clipped.size), self.powerSpectrum_TT_clipped, right=0.0)
+        self.powerSpectrum_TT_clipped_normalised_2d = np.sqrt(powerSpectrum_TT_clipped_2d) / self.pixel_size_rad
+        return None
+
+    def _calc_beam_and_noise(self, beam_width = None):
+        print("Calculating noise:")
+        if beam_width is not None:
+             print("Reading new beam width.")
+             self.beam_width = beam_width
+        if self.beam_width > 0:
+            print("Calculating beam effects.")    
+            sigma_b = np.deg2rad(self.beam_width / 60.0) / np.sqrt(8 * np.log(2))
+            self.beam = np.exp(-0.5 * self.fourier_grid * (self.fourier_grid + 1) * sigma_b**2)
+        print("Calculating white noise value.")
+        self.sigma_pixel = self.white_noise / self.pixel_size
+        return None
+
+    def create_cmb_maps(self):
+        print("Checking for power  spectrum:")
+        if self.powerSpectrum_TT_clipped_normalised_2d is None:
+            print("Preparing working power spectrum.")
+            self.create_powerSpectrum()
+            self._clip_powerSpectrum()
+            self._write_powerSpectrum_in_fourierSpace()
+        self._calc_beam_and_noise()
+        print("Creating CMB maps:")
+        rng = np.random.default_rng(self.seed)
+        print(f"Random seed set to {self.seed}.")
+        for n in range(self.n_maps):
+            random_seed = rng.standard_normal((self.n_pixel, self.n_pixel))
+            clean_map = np.fft.ifft2(np.fft.fft2(random_seed) * self.powerSpectrum_TT_clipped_normalised_2d).real
+            noisy_map = clean_map
+            if self.beam_width > 0:
+                noisy_map = np.fft.ifft2(np.fft.fft2(clean_map) * self.beam).real
+            if self.white_noise > 0:
+                noisy_map = noisy_map + self.sigma_pixel * rng.standard_normal((self.n_pixel, self.n_pixel))
+            self.clean[n] = clean_map
+            self.noisy[n] = noisy_map
+        print("CMB maps created!")
+        return None
+
+    def save_cmb_maps(self, filename = None):
+        if filename is not None:
+            self.filename = filename
+        print("Saving CMB maps:")
+        print(f"File - {self.filename}")
+        assert self.filename is not None
+        with h5py.File(self.filename + ".h5", "w") as f:
+            f.create_dataset("noisy", data = self.noisy, chunks = (1, self.n_pixel, self.n_pixel))
+            f.create_dataset("clean", data = self.clean, chunks = (1, self.n_pixel, self.n_pixel))
+            f.attrs.update(
+            npix=self.n_pixel, pix_arcmin=self.pixel_size, fwhm_arcmin=self.beam_width,
+            noise_ukarcmin=self.white_noise, seed=self.seed, lmax=self.l_max,
+        )
+        print("Saved!")
+        return None
+
+    def create_and_save_cmb_maps(self, filename = None):
+        self.create_cmb_maps()
+        self.save_cmb_maps(filename=filename)
+        return None
+
+
+# -----------------------------------------------------------------------------------------------------------
+# Visualize Maps --------------------------------------------------------------------------------------------
+
+def visualize_data_preNorm(datafile, outputfile = "../outputs/maps_preNorm.png"):
+    noisy, clean = functions.load_h5py(datafile)
+
+    noisy_tensor = torch.from_numpy(noisy).float().unsqueeze(1)
+    clean_tensor = torch.from_numpy(clean).float().unsqueeze(1)
+
+    dataset = TensorDataset(noisy_tensor, clean_tensor)
+    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
+
+    batch = next(iter(dataloader))
+    noisy, clean = batch
+
+    noisy = noisy.squeeze(1).detach().cpu().numpy()
+    clean = clean.squeeze(1).detach().cpu().numpy()
+
+    fig, axs = plt.subplots(4, 2, figsize=(16, 16))
+
+    for i in range(3):
+        im_noisy = axs[i][0].imshow(noisy[i])
+        axs[i][0].set_xlabel("x")
+        axs[i][0].set_ylabel("y")
+        axs[i][0].set_title(f"title {['first','second','third'][i]} map noisy")
+        fig.colorbar(im_noisy, ax=axs[i][0])
+
+        im_clean = axs[i][1].imshow(clean[i])
+        axs[i][1].set_xlabel("x")
+        axs[i][1].set_ylabel("y")
+        axs[i][1].set_title(f"title {['first','second','third'][i]} map clean")
+        fig.colorbar(im_clean, ax=axs[i][1])
+
+    plt.tight_layout()
+    plt.savefig(outputfile)
+
+    return None
+
+# -----------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------
 
 def main_beta_sources():
 
@@ -1113,9 +1332,19 @@ def main_simple_sources():
     visualize_maps(filename, visualization_path)
     return None
 
+def main_cmbMaps():
+
+    start_time = time.perf_counter()
+
+    cmb = CMB_map_maker()
+    cmb.create_and_save_cmb_maps()
+
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
+    functions.write_doc("cmb_map_creation", runtime=elapsed_time)
+    
+    return None
+
 if __name__ == "__main__":
     print("Executing main() in maps.py")
-    if simple_sources:
-        main_simple_sources()
-    if beta_sources:
-        main_beta_sources()
+    main_cmbMaps()

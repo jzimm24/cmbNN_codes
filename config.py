@@ -8,6 +8,17 @@ import models as models
 
 # ---------------------------------------------------------------------------------------------------------------------------------------
 
+# Cosmologies
+
+
+PLANCK2018 = dict(
+    H0=67.36, ombh2=0.02237, omch2=0.1200,
+    tau=0.0544, ln1e10As=3.044, ns=0.9649, mnu=0.06,
+)
+
+# ---------------------------------------------------------------------------------------------------------------------------------------
+
+
 class maps_config(NamedTuple):
     #class setting all necessary parameters for running maps.py
     save_mode = "hdf5"      # responsible for data type (choose 'hdf5' or 'csv')
@@ -38,13 +49,33 @@ class maps_config(NamedTuple):
     gaussian_smoothing_fwhm  = 1.0        # if >0, smooth final image with this FWHM   --> DEFAULT 5 PIXELS
 
 
-    output_h5               = '../data/realNoise128_30k_1WN_1f_3s_size30_0910.h5'
+    output_h5               = '../data/cmbMaps_w1000.h5'
 
     doc_path = "../outputs/docs/realNoise128_30k_1WN_1f_3s_size30_0910.txt"
 
     visualization_path = "../outputs/realNoise128_30k_1WN_1f_3s_size30_0910.png"
 
 maps_configs = maps_config()
+
+class cmbMaps_config(NamedTuple):
+    #class setting all necessary parameters for running maps.py for cmb map construction (different from retired real noise pipeline)
+    number_maps = 1000
+    map_size_arc = 256*2.0
+    pixel_size_arc = 2.0
+
+    cosmology = PLANCK2018
+    powerSpectrum = None
+    white_Noise_amplitude = 1500
+    l_max = 3000
+    beam_width = 0.0
+
+    h5_filename = "../data/cmb/cmbMaps_WN1500_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18"
+
+    seed = 42
+
+    doc_path = "../outputs/docs/cmb/cmb_map_creation_doc_cmbMaps_WN1500_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18.txt"
+
+cmbMaps_configs = cmbMaps_config()
 
 # ---------------------------------------------------------------------------------------------------------------------------------------
 
@@ -54,21 +85,21 @@ class training_config(NamedTuple):
     #class setting all necessary parameters for running training.py
     model: str = "GAN"                                     # model architecture (choose gan or unet) 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # checks available devices automatically (prefered gpu)
-    NUM_EPOCHS = 8                                       # number of epochs in training
-    BATCH_SIZE = 16                                         # batch size
+    NUM_EPOCHS = 4                                       # number of epochs in training
+    BATCH_SIZE = 8                                         # batch size
     LR = 5e-4                                               # learning rate
     LR_disc = 5e-5                                          # learning rate in the case of an existing discriminator
-    IMG_DIM = 128                                          # size of maps in data
-    DATA_FILE = "../data/realNoise128_30k_1WN_1f_3s_size30_0910.h5"   # data file storing images
+    IMG_DIM = 256                                          # size of maps in data
+    DATA_FILE = "../data/cmb/cmbMaps_w300_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18.h5"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
     EPOCH_TRAINING_FRAC = 1                               # relative amount of data in training split used in each epoch
-    NEW_MODEL = False
-    predecessor_model = "../models/GAN_lrGen0005_lrDisc00005_realNoise128_30k_1WN_1f_3s_size30_0910_epoch_8.pth"
-    trained_model_name = "../models/GAN_lrGen0005_lrDisc00005_realNoise128_30k_1WN_1f_3s_size30_0910"   # name of the trained model
+    NEW_MODEL = True
+    predecessor_model = ""
+    trained_model_name = "../models/GAN_lrGen0005_lrDisc00005_cmbMaps_w300_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18.pth"   # name of the trained model
     crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
-    doc_path = "../outputs/docs/training_GAN_lrGen0005_lrDisc00005_realNoise128_30k_1WN_1f_3s_size30_0910.txt"   # path for documentation file of the run
-    visualization = False                                   # should the value distribution of the data + some example maps of the dataset be visualized
-    visualization_file = "../outputs/GAN_lrGen0005_lrDisc00005_realNoise128_30k_1WN_1f_3s_size30_0910.png" # path for visualisation diagrams
+    doc_path = "../outputs/docs/training_GAN_lrGen0005_lrDisc00005_cmbMaps_w300_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18.txt"   # path for documentation file of the run
+    visualization = True                                        # should the value distribution of the data + some example maps of the dataset be visualized
+    visualization_file = "../outputs/GAN_lrGen0005_lrDisc00005_cmbMaps_w300_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18.png" # path for visualisation diagrams
 
 training_configs = training_config()
 
@@ -97,6 +128,6 @@ class eval_config(NamedTuple):
 
     TITLE = OUTPUT_FILE
 
-    doc_path = "../outputs/docs/evaluation_UNET_realNoise128_10k_1WN_1f_3s_size30_2409.pth_epoch_16txt"
+    doc_path = "../outputs/docs/evaluation_UNET_realNoise128_10k_1WN_1f_3s_size30_2409_epoch_16t.xt"
 
 evaluation_configs = eval_config()
