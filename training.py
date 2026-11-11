@@ -100,18 +100,10 @@ def data_load_and_prep(data_file=DATA_FILE, epsilon=1e-8):
     data_train = data[:n_train]
     sol_train = sol[:n_train]
 
-    # Global statistics from the training split only
-    data_min = float(data_train.min())
-    data_amp = float(data_train.max() - data_min) + epsilon
-    sol_min = float(sol_train.min())
-    sol_amp = float(sol_train.max() - sol_min) + epsilon
-
-    data_denorm_vals = (data_min, data_amp)
-    sol_denorm_vals = (sol_min, sol_amp)
-
-    # Same constants for every map
-    data_train = (data_train - data_min) / data_amp
-    sol_train = (sol_train - sol_min) / sol_amp
+    data_train, data_denorm_amp, data_denorm_min = functions.normalize_data_gloabally(data_train)
+    sol_train, sol_denorm_amp, sol_denorm_min = functions.normalize_data_gloabally(sol_train)
+    data_denorm_vals = [data_denorm_amp, data_denorm_min]
+    sol_denorm_vals = [sol_denorm_amp, sol_denorm_min]
 
     data_tensor = torch.from_numpy(data_train).float().unsqueeze(1)
     sol_tensor = torch.from_numpy(sol_train).float().unsqueeze(1)
@@ -592,7 +584,7 @@ def load_GAN_model(checkpoint_path, in_channels = 1, discriminator_conv_channels
     prev_epochs(int): number of epochs the model has been trained
     """
     gan = init_GAN_model(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr_gen, lr_disc, betas, device)
-    checkpoint = torch.load(checkpoint_path, map_location=gan.device)
+    checkpoint = torch.load(checkpoint_path, map_location=gan.device, weights_only=False)
     gan.load_state_dict(checkpoint["generator_state_dict"])
 
     denorm_vals_noisy = checkpoint["denorm_vals_noisy"]

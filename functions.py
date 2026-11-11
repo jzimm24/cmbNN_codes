@@ -32,7 +32,11 @@ def normalize_data(data, epsilon = 1e-8):
     return data, amp, data_min
 
 def normalize_data_gloabally(data, epsilon = 1e-8):
-     return None
+    data_min = data.min()
+    data_max = data.max()
+    amp = data_max - data_min + epsilon
+    data = (data - data_min) / amp
+    return data, amp, data_min
 
 def normalize_map(map, epsilon = 1e-8):
     map_min = map.min()
@@ -41,11 +45,15 @@ def normalize_map(map, epsilon = 1e-8):
     amp = map_max - map_min + epsilon
     return map, amp, map_min
 
-def denormalize_map():
-     return None
+def denormalize_map(map, denorm_vals):
+    amp, min = denorm_vals
+    map = (map * amp) + min
+    return map
 
-def denormalize_data_globally():
-     return None
+def denormalize_data_globally(data, denorm_vals):
+    amp, min = denorm_vals
+    map = (map * denorm_vals[0]) + denorm_vals[1]
+    return None
 
 def radial_bin_indices(nx, ny):
     x, y = np.indices((nx, ny))

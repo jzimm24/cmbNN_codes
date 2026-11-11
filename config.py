@@ -65,15 +65,15 @@ class cmbMaps_config(NamedTuple):
 
     cosmology = PLANCK2018
     powerSpectrum = None
-    white_Noise_amplitude = 1500
+    white_Noise_amplitude = 900
     l_max = 3000
     beam_width = 0.0
 
-    h5_filename = "../data/cmb/cmbMaps_WN1500_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18"
+    h5_filename = "../data/cmb/cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18"
 
     seed = 42
 
-    doc_path = "../outputs/docs/cmb/cmb_map_creation_doc_cmbMaps_WN1500_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18.txt"
+    doc_path = "../outputs/docs/cmb/cmb_map_creation_doc_cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18.txt"
 
 cmbMaps_configs = cmbMaps_config()
 
@@ -85,21 +85,21 @@ class training_config(NamedTuple):
     #class setting all necessary parameters for running training.py
     model: str = "GAN"                                     # model architecture (choose gan or unet) 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # checks available devices automatically (prefered gpu)
-    NUM_EPOCHS = 4                                       # number of epochs in training
+    NUM_EPOCHS = 8                                       # number of epochs in training
     BATCH_SIZE = 8                                         # batch size
     LR = 5e-4                                               # learning rate
     LR_disc = 5e-5                                          # learning rate in the case of an existing discriminator
     IMG_DIM = 256                                          # size of maps in data
-    DATA_FILE = "../data/cmb/cmbMaps_w300_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18.h5"   # data file storing images
+    DATA_FILE = "../data/cmb/cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18.h5"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
     EPOCH_TRAINING_FRAC = 1                               # relative amount of data in training split used in each epoch
-    NEW_MODEL = True
-    predecessor_model = ""
-    trained_model_name = "../models/GAN_lrGen0005_lrDisc00005_cmbMaps_w300_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18.pth"   # name of the trained model
+    NEW_MODEL = False
+    predecessor_model = "../models/cmb/GAN_lrGen0005_lrDisc00005_cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18.pth_epoch_4.pth"
+    trained_model_name = "../models/cmb/GAN_lrGen0005_lrDisc00005_cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18"   # name of the trained model
     crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
-    doc_path = "../outputs/docs/training_GAN_lrGen0005_lrDisc00005_cmbMaps_w300_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18.txt"   # path for documentation file of the run
-    visualization = True                                        # should the value distribution of the data + some example maps of the dataset be visualized
-    visualization_file = "../outputs/GAN_lrGen0005_lrDisc00005_cmbMaps_w300_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18.png" # path for visualisation diagrams
+    doc_path = "../outputs/docs/training_GAN_lrGen0005_lrDisc00005_cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18_epoch4to12.txt"   # path for documentation file of the run
+    visualization = False                                        # should the value distribution of the data + some example maps of the dataset be visualized
+    visualization_file = "../outputs/GAN_lrGen0005_lrDisc00005_cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw0_p18.png" # path for visualisation diagrams
 
 training_configs = training_config()
 
@@ -119,10 +119,10 @@ class eval_config(NamedTuple):
     EVAL_FILE = f"../outputs/{BASE_NAME}.txt"
 
     EVAL_SPLIT = 1 - training_configs.TRAIN_SPLIT
-    BATCH_SIZE = 32
+    BATCH_SIZE = 8
 
 
-    IMG_SIZE = 128
+    IMG_SIZE = 256
     MAX_VAL = 1 # for psnr
     DATA_RANGE = [0, MAX_VAL]
 

@@ -76,7 +76,7 @@ def load_model(path: str = MODEL_FILE, device: str = DEVICE):
         model = training.init_GAN_model()
         print("Loading Model of GAN-architecture.")
         model.to(device)
-        last_model_state = torch.load(path, map_location=device)
+        last_model_state = torch.load(path, map_location=device, weights_only=False)
         model.load_state_dict(last_model_state["generator_state_dict"])
         denorm_vals_noisy = last_model_state["denorm_vals_noisy"]
         denorm_vals_sol = last_model_state["denorm_vals_sol"]
@@ -134,17 +134,16 @@ def load_and_prep_eval_data(data_file, epsilon = 1e-8):
     data_eval = data[(n_total-n_eval):]
     sol_eval = sol[(n_total - n_eval):]
 
-    data_eval_normalized, *data_eval_normalisationParas = functions.normalize_data(data_eval, epsilon)
-    sol_eval_normalized, *sol_eval_normalisationParas = functions.normalize_data(sol_eval, epsilon)
-
-    data_eval_normalisationParas = tuple(data_eval_normalisationParas)
-    sol_eval_normalisationParas = tuple(sol_eval_normalisationParas)
+    data_eval_normalized, data_eval_denorm_amp, data_eval_denorm_min = functions.normalize_data_gloabally(data_eval)
+    sol_eval_normalized, sol_eval_denorm_amp, sol_eval_denorm_min = functions.normalize_data_gloabally(sol_eval)
+    data_denorm_vals = [data_eval_denorm_amp, data_eval_denorm_min]
+    sol_denorm_vals = [sol_eval_denorm_amp, sol_eval_denorm_min]
 
     data_tensor = torch.from_numpy(data_eval_normalized).float().unsqueeze(1)
     sol_tensor = torch.from_numpy(sol_eval_normalized).float().unsqueeze(1)
     dataset = TensorDataset(data_tensor, sol_tensor)
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False)
-    return dataloader, data_eval_normalisationParas, sol_eval_normalisationParas
+    return dataloader, data_denorm_vals, sol_denorm_vals
 
 def load_random_samples(path: str, n = 1, seed=42, epsilon=1e-8):
     dataloader, data_paras, sol_paras = load_and_prep_eval_data(path, epsilon)
@@ -368,16 +367,15 @@ def eval_power_spectrum(model = None, data = None, model_path = None, data_file 
         if model_path is None:
             raise ModelAccessibilityError()
         else:
-            model = load_model(model_path, device)
+            model, _, _ = eval.load_model(model_path, device)
     if data is None:
         if data_file is None:
             raise DataAccessibilityError()
         else:
-            dataloader, noisy_denorm_paras, clean_denorm_paras = load_and_prep_eval_data(data_file)
+            dataloader, noisy_denorm_paras, clean_denorm_paras = eval.load_and_prep_eval_data(data_file)
     else:
         dataloader = data
 
-    max_r = img_size // 2
     residuals = []
     power_groundtruths = []
     power_preds = []
@@ -390,9 +388,11 @@ def eval_power_spectrum(model = None, data = None, model_path = None, data_file 
             for i in range(preds_np.shape[0]):
                 pred_img = preds_np[i, 0]
                 y_img = y.numpy()[i, 0]
+                pred_img_denormalized = functions.denormalize_map(pred_img, clean_denorm_paras)
+                y_img_denormalized = functions.denormalize_map(y_img, clean_denorm_paras)
 
-                k_bins, current_power_pred = radial_power_spectrum(pred_img)
-                _, current_power_groundtruth = radial_power_spectrum(y_img)
+                k_bins, current_power_pred = radial_power_spectrum(pred_img_denormalized)
+                _, current_power_groundtruth = radial_power_spectrum(y_img_denormalized)
 
                 with np.errstate(divide="ignore", invalid="ignore"):
                     current_residual = (current_power_pred - current_power_groundtruth) / current_power_groundtruth
