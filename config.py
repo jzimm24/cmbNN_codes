@@ -59,7 +59,7 @@ maps_configs = maps_config()
 
 class cmbMaps_config(NamedTuple):
     #class setting all necessary parameters for running maps.py for cmb map construction (different from retired real noise pipeline)
-    number_maps = 1000
+    number_maps = 10000
     map_size_arc = 256*2.0
     pixel_size_arc = 2.0
 
@@ -69,11 +69,11 @@ class cmbMaps_config(NamedTuple):
     l_max = 3000
     beam_width = 10.0
 
-    h5_filename = "../data/cmb/cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18"
+    h5_filename = "../data/cmb/cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18"
 
     seed = 42
 
-    doc_path = "../outputs/docs/cmb/cmb_map_creation_doc_cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.txt"
+    doc_path = "../outputs/docs/cmb/cmb_map_creation_doc_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.txt"
 
 cmbMaps_configs = cmbMaps_config()
 
