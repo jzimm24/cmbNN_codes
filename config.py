@@ -65,15 +65,15 @@ class cmbMaps_config(NamedTuple):
 
     cosmology = PLANCK2018
     powerSpectrum = None
-    white_Noise_amplitude = 900
+    white_Noise_amplitude = 300
     l_max = 3000
-    beam_width = 10.0
+    beam_width = 5.0
 
-    h5_filename = "../data/cmb/cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18"
+    h5_filename = "../data/cmb/cmbMaps_WN300_size512arcmin_pixelSize2arcmin_lmax3000_bw5_p18"
 
     seed = 42
 
-    doc_path = "../outputs/docs/cmb/cmb_map_creation_doc_cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.txt"
+    doc_path = "../outputs/docs/cmb/cmb_map_creation_doc_cmbMaps_WN300_size512arcmin_pixelSize2arcmin_lmax3000_bw5_p18.txt"
 
 cmbMaps_configs = cmbMaps_config()
 
