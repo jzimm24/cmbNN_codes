@@ -90,16 +90,16 @@ class training_config(NamedTuple):
     LR = 5e-4                                               # learning rate
     LR_disc = 5e-5                                          # learning rate in the case of an existing discriminator
     IMG_DIM = 256                                          # size of maps in data
-    DATA_FILE = "../data/cmb/cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.h5"   # data file storing images
+    DATA_FILE = "../data/cmb/cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.h5"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
     EPOCH_TRAINING_FRAC = 1                               # relative amount of data in training split used in each epoch
     NEW_MODEL = True
     predecessor_model = ""
-    trained_model_name = "../models/cmb/GAN_lrGen0005_lrDisc00005_cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18"   # name of the trained model
+    trained_model_name = "../models/cmb/GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18"   # name of the trained model
     crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
-    doc_path = "../outputs/docs/training_GAN_lrGen0005_lrDisc00005_cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.txt"   # path for documentation file of the run
+    doc_path = "../outputs/docs/training_GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.txt"   # path for documentation file of the run
     visualization = False                                        # should the value distribution of the data + some example maps of the dataset be visualized
-    visualization_file = "../outputs/GAN_lrGen0005_lrDisc00005_cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.png" # path for visualisation diagrams
+    visualization_file = "../outputs/GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.png" # path for visualisation diagrams
 
 training_configs = training_config()
 
