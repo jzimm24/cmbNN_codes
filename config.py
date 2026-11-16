@@ -67,7 +67,7 @@ class cmbMaps_config(NamedTuple):
     powerSpectrum = None
     white_Noise_amplitude = 900
     l_max = 3000
-    beam_width = 10.0
+    beam_width = 0.0
 
     h5_filename = "../data/cmb/cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18"
 
@@ -97,7 +97,7 @@ class training_config(NamedTuple):
     predecessor_model = ""
     trained_model_name = "../models/cmb/GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18"   # name of the trained model
     crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
-    doc_path = "../outputs/docs/training_GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.txt"   # path for documentation file of the run
+    doc_path = "../outputs/docs/cmb/training_GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.txt"   # path for documentation file of the run
     visualization = False                                        # should the value distribution of the data + some example maps of the dataset be visualized
     visualization_file = "../outputs/GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.png" # path for visualisation diagrams
 
