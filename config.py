@@ -85,14 +85,14 @@ class training_config(NamedTuple):
     #class setting all necessary parameters for running training.py
     model: str = "GAN"                                     # model architecture (choose gan or unet) 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # checks available devices automatically (prefered gpu)
-    NUM_EPOCHS = 4                                       # number of epochs in training
-    BATCH_SIZE = 8                                         # batch size
+    NUM_EPOCHS = 32                                   # number of epochs in training
+    BATCH_SIZE = 32                                         # batch size
     LR = 5e-4                                               # learning rate
     LR_disc = 5e-5                                          # learning rate in the case of an existing discriminator
     IMG_DIM = 256                                          # size of maps in data
     DATA_FILE = "../data/cmb/cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.h5"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
-    EPOCH_TRAINING_FRAC = 1                               # relative amount of data in training split used in each epoch
+    EPOCH_TRAINING_FRAC = 0.5                               # relative amount of data in training split used in each epoch
     NEW_MODEL = True
     predecessor_model = ""
     trained_model_name = "../models/cmb/GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18"   # name of the trained model
