@@ -85,7 +85,7 @@ class training_config(NamedTuple):
     #class setting all necessary parameters for running training.py
     model: str = "GAN"                                     # model architecture (choose gan or unet) 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # checks available devices automatically (prefered gpu)
-    NUM_EPOCHS = 32                                   # number of epochs in training
+    NUM_EPOCHS = 8                                   # number of epochs in training
     BATCH_SIZE = 32                                         # batch size
     LR = 5e-4                                               # learning rate
     LR_disc = 5e-5                                          # learning rate in the case of an existing discriminator
@@ -97,9 +97,9 @@ class training_config(NamedTuple):
     predecessor_model = ""
     trained_model_name = "../models/cmb/GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18"   # name of the trained model
     crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
-    doc_path = "../outputs/docs/cmb/training_GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.txt"   # path for documentation file of the run
+    doc_path = "../outputs/docs/cmb/training_GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18_epoch8.txt"   # path for documentation file of the run
     visualization = False                                        # should the value distribution of the data + some example maps of the dataset be visualized
-    visualization_file = "../outputs/GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.png" # path for visualisation diagrams
+    visualization_file = "../outputs/GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18_epoch8.png" # path for visualisation diagrams
 
 training_configs = training_config()
 
