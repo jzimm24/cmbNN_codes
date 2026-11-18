@@ -42,6 +42,11 @@ EPOCH_TRAINING_FRAC = config.training_configs.EPOCH_TRAINING_FRAC
 NEW_MODEL = config.training_configs.NEW_MODEL
 predecessor_model = config.training_configs.predecessor_model
 
+LR_decay_G = config.gan_configs.lr_decay_G
+LR_decay_D = config.gan_configs.lr_decay_D
+LR_decay_freq = config.gan_configs.lr_decay_freq
+decayFreeEpochs = config.gan_configs.decay_free_epochs
+
 # no .pth
 trained_model_name = config.training_configs.trained_model_name
 
@@ -543,7 +548,8 @@ def training_and_saving_resUNET_model(resUNET, resUNET_optimizer, dataloader, nu
 
 # GAN -------------------------------------------------------------------------------------------------------------------------------------
 
-def init_GAN_model(in_channels = 1, discriminator_conv_channels = 32, discriminator_depth = 5, lambda_recon = 100, lr_gen = LR_gen, lr_disc = LR_disc, betas = (0.5, 0.999), device = DEVICE):
+def init_GAN_model(in_channels = 1, discriminator_conv_channels = 32, discriminator_depth = 5, lambda_recon = 100, lr_gen = LR_gen, lr_disc = LR_disc,
+                    lr_decay_G = LR_decay_G, lr_decay_D = LR_decay_D, lr_decay_freq = LR_decay_freq, decay_free_epochs = decayFreeEpochs, betas = (0.5, 0.999), device = DEVICE):
     """
     Initializes a GAN model (unrelated to nn.Module).
 
@@ -561,10 +567,11 @@ def init_GAN_model(in_channels = 1, discriminator_conv_channels = 32, discrimina
     -------
     gan: untrained gan model. The optimizer is part of this gan class. This class does NOT inherit from nn.Module.
     """
-    gan = models.Gan(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr_gen, lr_disc, betas, device)
+    gan = models.Gan(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr_gen, lr_disc, lr_decay_G, lr_decay_D, lr_decay_freq, decay_free_epochs,  betas, device)
     return gan
 
-def load_GAN_model(checkpoint_path, in_channels = 1, discriminator_conv_channels = 32, discriminator_depth = 5, lambda_recon = 100, lr_gen = LR_gen, lr_disc = LR_disc, betas = (0.5, 0.999), device = DEVICE):
+def load_GAN_model(checkpoint_path, in_channels = 1, discriminator_conv_channels = 32, discriminator_depth = 5, lambda_recon = 100, lr_gen = LR_gen, lr_disc = LR_disc,
+                   lr_decay_G = LR_decay_G, lr_decay_D = LR_decay_D, lr_decay_freq = LR_decay_freq, decay_free_epochs = decayFreeEpochs, betas = (0.5, 0.999), device = DEVICE):
     """
     Initializes a Gan model. Parameters have to match those of the loaded model.
 
@@ -583,7 +590,7 @@ def load_GAN_model(checkpoint_path, in_channels = 1, discriminator_conv_channels
     gan: Trained GAN model
     prev_epochs(int): number of epochs the model has been trained
     """
-    gan = init_GAN_model(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr_gen, lr_disc, betas, device)
+    gan = init_GAN_model(in_channels, discriminator_conv_channels, discriminator_depth, lambda_recon, lr_gen, lr_disc, lr_decay_G, lr_decay_D, lr_decay_freq, decay_free_epochs, betas, device)
     checkpoint = torch.load(checkpoint_path, map_location=gan.device, weights_only=False)
     gan.load_state_dict(checkpoint["generator_state_dict"])
 
@@ -632,6 +639,8 @@ def training_GAN(GAN, data, data_fraction = EPOCH_TRAINING_FRAC, num_epochs = NU
         running_loss_G = 0
         running_loss_adv = 0
         running_loss_recon = 0
+        if epoch%GAN.lr_decay_freq == 0 and epoch >= GAN.decay_free_epochs:
+            GAN.learning_rate_decay()
         for x, y in epoch_loader:
             x = x.to(GAN.device)
             y = y.to(GAN.device)

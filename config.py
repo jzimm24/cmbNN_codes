@@ -85,23 +85,33 @@ class training_config(NamedTuple):
     #class setting all necessary parameters for running training.py
     model: str = "GAN"                                     # model architecture (choose gan or unet) 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu" # checks available devices automatically (prefered gpu)
-    NUM_EPOCHS = 8                                   # number of epochs in training
-    BATCH_SIZE = 32                                         # batch size
+    NUM_EPOCHS = 24                                   # number of epochs in training
+    BATCH_SIZE = 8                                         # batch size
     LR = 5e-4                                               # learning rate
     LR_disc = 5e-5                                          # learning rate in the case of an existing discriminator
     IMG_DIM = 256                                          # size of maps in data
-    DATA_FILE = "../data/cmb/cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18.h5"   # data file storing images
+    DATA_FILE = "../data/cmb/cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw5_p18.h5"   # data file storing images
     TRAIN_SPLIT = 1-0.05                                    # relative amount of data used for training
-    EPOCH_TRAINING_FRAC = 0.5                               # relative amount of data in training split used in each epoch
+    EPOCH_TRAINING_FRAC = 0.05                               # relative amount of data in training split used in each epoch
     NEW_MODEL = True
     predecessor_model = ""
-    trained_model_name = "../models/cmb/GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18"   # name of the trained model
+    trained_model_name = "../models/cmb/TESTgan_lrDecay_cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw5_p18"   # name of the trained model
     crit = nn.BCEWithLogitsLoss()                           # criterium used for calculating model loss
-    doc_path = "../outputs/docs/cmb/training_GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18_epoch8.txt"   # path for documentation file of the run
+    doc_path = "../outputs/docs/cmb/training_TESTgan_lrDecay_cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw5_p18.txt"   # path for documentation file of the run
     visualization = False                                        # should the value distribution of the data + some example maps of the dataset be visualized
-    visualization_file = "../outputs/GAN_lrGen0005_lrDisc00005_cmbMaps_n10000_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw10_p18_epoch8.png" # path for visualisation diagrams
+    visualization_file = "../outputs/TESTgan_lrDecay_cmbMaps_WN900_size512arcmin_pixelSize2arcmin_lmax3000_bw5_p18.png" # path for visualisation diagrams
 
 training_configs = training_config()
+
+class gan_config(NamedTuple):
+    lr_G = training_configs.LR                                  
+    lr_D = training_configs.LR_disc                                        
+    lr_decay_G = 0.9                                               
+    lr_decay_D = 0.9
+    lr_decay_freq = 2
+    decay_free_epochs = 8
+
+gan_configs = gan_config()
 
 # ---------------------------------------------------------------------------------------------------------------------------------------
 
