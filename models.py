@@ -330,11 +330,13 @@ class Gan():
             "opt_D": self.opt_D.state_dict(),
         }
 
-    def load_state_dict(self, state):
+    def load_state_dict(self, state, load_optimizers=True):
         self.generator.load_state_dict(state["generator"])
         self.discriminator.load_state_dict(state["discriminator"])
-        self.opt_G.load_state_dict(state["opt_G"])
-        self.opt_D.load_state_dict(state["opt_D"])
+        if load_optimizers:
+            self.opt_G.load_state_dict(state["opt_G"])
+            self.opt_D.load_state_dict(state["opt_D"])
+        return None
 
     def to(self, device):
         self.generator.to(device)
@@ -343,11 +345,12 @@ class Gan():
         return self
 
     def learning_rate_decay(self):
-        self.lr_G = self.lr_G*self.lr_decay_G
-        self.lr_D = self.lr_D*self.lr_decay_D
-        self.opt_G = torch.optim.Adam(self.generator.parameters(), lr=self.lr_G, betas=self.betas)
-        self.opt_D = torch.optim.Adam(self.generator.parameters(), lr=self.lr_D, betas=self.betas)
+        self.lr_G = self.lr_G * self.lr_decay_G
+        self.lr_D = self.lr_D * self.lr_decay_D
+        for g in self.opt_G.param_groups:
+            g["lr"] = self.lr_G
+        for g in self.opt_D.param_groups:
+            g["lr"] = self.lr_D
         print("New generator learning rate:", self.lr_G)
         print("New discriminator learning rate:", self.lr_D)
         return None
-

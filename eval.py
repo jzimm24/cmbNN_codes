@@ -77,7 +77,8 @@ def load_model(path: str = MODEL_FILE, device: str = DEVICE):
         print("Loading Model of GAN-architecture.")
         model.to(device)
         last_model_state = torch.load(path, map_location=device, weights_only=False)
-        model.load_state_dict(last_model_state["generator_state_dict"])
+        model.load_state_dict(last_model_state["generator_state_dict"], load_optimizers=False)
+        model.eval()
         denorm_vals_noisy = last_model_state["denorm_vals_noisy"]
         denorm_vals_sol = last_model_state["denorm_vals_sol"]
     elif "resnet" in path or modelArchitecture == "ResUNET":
