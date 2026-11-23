@@ -106,9 +106,16 @@ def data_load_and_prep(data_file=DATA_FILE, epsilon=1e-8):
     sol_train = sol[:n_train]
 
     data_train, data_denorm_amp, data_denorm_min = functions.normalize_data_gloabally(data_train)
+    print("Single normalization parameters for data during load_and_prep")
+    print("data_denorm_amp:", data_denorm_amp, "data_denorm_min:", data_denorm_min)
     sol_train, sol_denorm_amp, sol_denorm_min = functions.normalize_data_gloabally(sol_train)
+    print("Single normalization parameters for solutions during load_and_prep")
+    print("data_denorm_amp:", sol_denorm_amp, "data_denorm_min:", sol_denorm_min)
     data_denorm_vals = [data_denorm_amp, data_denorm_min]
     sol_denorm_vals = [sol_denorm_amp, sol_denorm_min]
+    print("Bundled normalization parameters during load_and_prep")
+    print("data_norm_paras:", data_denorm_vals)
+    print("sol_norm_paras:", sol_denorm_vals)
 
     data_tensor = torch.from_numpy(data_train).float().unsqueeze(1)
     sol_tensor = torch.from_numpy(sol_train).float().unsqueeze(1)
@@ -627,6 +634,7 @@ def training_GAN(GAN, data, data_fraction = EPOCH_TRAINING_FRAC, num_epochs = NU
     """
 
     dataloader, denorm_vals_noisy, denorm_vals_sol = data
+    print("Data used in training_GAN:", denorm_vals_noisy, denorm_vals_sol)
 
     for epoch in range(num_epochs):
         print("##############")
@@ -634,6 +642,7 @@ def training_GAN(GAN, data, data_fraction = EPOCH_TRAINING_FRAC, num_epochs = NU
         print("##############")
 
         epoch_loader = make_subset_loader(dataloader=dataloader, fraction=data_fraction)
+        
 
         running_loss_D = 0
         running_loss_G = 0
@@ -658,6 +667,9 @@ def training_GAN(GAN, data, data_fraction = EPOCH_TRAINING_FRAC, num_epochs = NU
                      "loss_recon": running_loss_recon,
                      "loss_adv": running_loss_adv}
 
+        #print("Diagnostics:")
+        #print(f"alloc: {torch.cuda.memory_allocated()/2**20:.0f} MiB, "f"peak: {torch.cuda.max_memory_allocated()/2**20:.0f} MiB")
+
     return GAN, loss_dict, denorm_vals_noisy, denorm_vals_sol
 
 def training_and_saving_GAN(GAN, data, data_fraction = EPOCH_TRAINING_FRAC, num_epochs = NUM_EPOCHS, path = trained_model_name, prev_epochs = 0):
@@ -679,7 +691,13 @@ def training_and_saving_GAN(GAN, data, data_fraction = EPOCH_TRAINING_FRAC, num_
     print("############################")
     print("Training model:")
     print("############################")
+    #print("Normalization parameters inside training_and_saving_Gan (before training)")
+    #print("data[1] (noisy):", data[1])
+    #print("data[2] (clean):", data[2])
     gan, loss, denorm_vals_noisy, denorm_vals_sol = training_GAN(GAN, data, data_fraction, num_epochs)
+    #print("Normalization parameters inside training_and_saving_Gan (after training)")
+    #print("data[1] (noisy):", data[1])
+    #print("data[2] (clean):", data[2])
     checkpoint = {
     "epoch": num_epochs,
     "generator_state_dict": gan.state_dict(),
@@ -707,7 +725,11 @@ def main():
     # Load simulated data and normalize it. Wrap data in dataloader
     data = data_load_and_prep()
     dataloader, denorm_vals_noisy, denorm_vals_sol = data
-    # Visuallize the value distribution of the data and present example images right before training
+    print("Normalization parameters given to main from load and prep")
+    print("denorm_vals_noisy:", denorm_vals_noisy)
+    print("denorm_vals_sol:", denorm_vals_sol)
+    print("Data taken from data_load_and_prep:", denorm_vals_noisy, denorm_vals_sol)
+    # Visualize the value distribution of the data and present example images right before training
     if data_visualization:
         visualize_data_distr(dataloader, visualization_file, visualization_file[:-4])
 

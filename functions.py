@@ -36,6 +36,11 @@ def normalize_data_gloabally(data, epsilon = 1e-8):
     data_max = data.max()
     amp = data_max - data_min + epsilon
     data = (data - data_min) / amp
+    #print("################################################")
+    #print("Normalization parameters at global computation:")
+    #print("data_amp:", amp, "data_min:", data_min)
+    #print("data_max:", data_max)
+    #print("################################################")
     return data, amp, data_min
 
 def normalize_map(map, epsilon = 1e-8):
@@ -47,12 +52,15 @@ def normalize_map(map, epsilon = 1e-8):
 
 def denormalize_map(map, denorm_vals):
     amp, min = denorm_vals
+    #print("###################################")
+    #print("Denormalizeation values")
+    #print("amp:", amp, "min:", min)
     map = (map * amp) + min
     return map
 
 def denormalize_data_globally(data, denorm_vals):
     amp, min = denorm_vals
-    map = (map * denorm_vals[0]) + denorm_vals[1]
+    data = (data * amp) + min
     return None
 
 def radial_bin_indices(nx, ny):
