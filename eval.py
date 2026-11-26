@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import re
+import io
 
 import torch
 import torch.nn as nn
@@ -28,7 +30,9 @@ EVAL_SPLIT = config.evaluation_configs.EVAL_SPLIT
 BATCH_SIZE = config.evaluation_configs.BATCH_SIZE
 
 
-IMG_SIZE = config.evaluation_configs.IMG_SIZE
+pixel_n = config.evaluation_configs.pixel_n
+IMG_SIZE = config.evaluation_configs.img_size
+PXL_SIZE = config.evaluation_configs.pixel_size
 MAX_VAL = config.evaluation_configs.MAX_VAL                     # for psnr
 DATA_RANGE = config.evaluation_configs.DATA_RANGE
 
@@ -215,8 +219,13 @@ def make_figures(
 
         for j, (img, (lo, hi)) in enumerate(zip(imgs, limits)):
             ax = axes[i, j]
-            im = ax.imshow(img, cmap="viridis", vmin=lo, vmax=hi)
-            ax.axis("off")
+            im = ax.imshow(
+                img, cmap="viridis", vmin=lo, vmax=hi,
+                extent=[0, IMG_SIZE, 0, IMG_SIZE],
+                origin="lower",   # see note below
+            )
+            ax.set_xlabel("arcmin")
+            ax.set_ylabel("arcmin")
             fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
             if i == 0:
                 ax.set_title(col_titles[j])
@@ -228,10 +237,6 @@ def make_figures(
     print(f"Figure saved to: {save_path}")
 
     plt.close(fig)
-    return None
-
-def denormalisation(normalised_dataloader, amplitude):
-
     return None
 
 def eval_MSE(model = None, data = None, model_file = MODEL_FILE, data_file = DATA_FILE, batch_size = 16, device = DEVICE):
@@ -362,7 +367,7 @@ def radial_power_spectrum(image):
             power[k] = np.nan
     return k_bins, power
 
-def eval_power_spectrum(model = None, data = None, model_path = None, data_file = None, batch_size = BATCH_SIZE, device = DEVICE, img_size=IMG_SIZE):
+def eval_power_spectrum(model = None, data = None, model_path = None, data_file = None, batch_size = BATCH_SIZE, device = DEVICE):
 
     if model is None:
         if model_path is None:
@@ -405,78 +410,169 @@ def eval_power_spectrum(model = None, data = None, model_path = None, data_file 
 
     return k_bins, residuals, power_preds, power_groundtruths
 
-def cross_correlation_coefficient(groundtruth_img, pred_img):
-    nx, ny = groundtruth_img.shape
+def compute_fractional_residual(power_clean, power_pred):
+    assert len(power_clean) == len(power_pred), "Number of groundtruth and prediction powerspectra differ."
+    power_clean = np.array(power_clean)
+    power_pred = np.array(power_pred)
+    frac_res = []
+    for i in range(len(power_clean)):
+        frac_res.append((power_pred[i] - power_clean[i])/power_clean[i])
+    return frac_res
 
-    groundtruth_fft = np.fft.fftshift(np.fft.fft2(groundtruth_img))
-    pred_fft = np.fft.fftshift(np.fft.fft2(pred_img))
+def plot_fractional_residual(ell = None, k_bins = None, L = IMG_SIZE,  frac_res = None, power_clean = None, power_pred = None, residuals = None, ell_min = 0, ell_max = 2000, number_of_fracRes = 50, save_path = ""):
+    if ell is None:
+        assert k_bins is not None, "ell and k_bins cannot both be None. One has to be given."
+        ell = k_bins * 2*np.pi / L
+    if frac_res is None:
+        assert power_clean is not None and power_pred is not None and residuals is not None, "Power Spectra needed to calculate fracional residuals"
+        frac_res = compute_fractional_residual(power_clean, power_pred)
+    ell = ell[2:]
+    valid = (ell<ell_max)
+    ell = ell[valid]
+    frac_res = np.array(frac_res)[:, 2:]
+    frac_res = frac_res[:, valid]
+    if len(frac_res)<number_of_fracRes:
+        for i in range(len(frac_res)):
+            y = frac_res[i]
+            plt.plot(ell, y, color = "red", alpha = 0.1)
+            plt.xlim(ell_min, ell_max)
+    if len(frac_res)>=number_of_fracRes:
+        for i in range(number_of_fracRes):
+            y = frac_res[i]
+            plt.plot(ell, y, color = "red", alpha = 0.1)
+            plt.xlim(ell_min, ell_max)
 
-    groundtruth_power2d = np.abs(groundtruth_fft)**2
-    pred_power2d = np.abs(pred_fft)**2
+    plt.ylabel(r"$( \hat{C}_\ell - C_\ell )/ C_\ell$", fontsize=16)
+    plt.xlabel(r"$\ell$", fontsize=16)
+    #plt.legend()
+    plt.savefig(save_path)
+    return None
 
-    cross_power2d = np.real(groundtruth_fft * np.conj(pred_fft))
+def compute_power_ratio(power_clean, power_pred):
+    power_clean = power_clean[2:]
+    power_pred = power_pred[2:]
+    assert len(power_clean) == len(power_pred), "Number of groundtruth and prediction powerspectra differ."
+    ratio = []
+    for i in range(len(power_clean)):
+        ratio.append(power_pred[i]/power_clean[i])
+    return ratio
+
+def plot_power_ratio(ell = None, k_bins = None, L = IMG_SIZE,  ratio = None, power_clean = None, power_pred = None, ell_min = 0, ell_max = 2000, number_of_ratios = 50, save_path = ""):
+    if ell is None:
+        assert k_bins is not None, "ell and k_bins cannot both be None. One has to be given."
+        ell = k_bins * 2*np.pi / L
+    if ratio is None:
+        assert power_clean is not None and power_pred is not None, "Power Spectra needed to calculate the ratio between them."
+        ratio = compute_power_ratio(power_clean, power_pred)
+    ell = ell[2:]
+    valid = (ell<ell_max)
+    ell = ell[valid]
+    ratio = np.array(ratio)[:, 2:]
+    ratio = ratio[:, valid]
+    if len(ratio)<number_of_ratios:
+        for i in range(len(ratio)):
+            y = ratio[i]
+            plt.plot(ell, y, color = "red", alpha = 0.1)
+            plt.xlim(ell_min, ell_max)
+    if len(ratio)>=number_of_ratios:
+        for i in range(number_of_ratios):
+            y = ratio[i]
+            plt.plot(ell, y, color = "red", alpha = 0.1)
+            plt.yscale("log")
+            plt.xlim(ell_min, ell_max)
+
+    plt.ylabel(r"$\hat{C}_\ell / C_\ell$", fontsize=16)
+    plt.xlabel(r"$\ell$", fontsize=16)
+    #plt.legend()
+    plt.savefig(save_path)
+    return None
+
+def n_modes(k_bins, N=256, dk=1.0):
+    """Independent modes per radial bin (half the FFT modes, since the map is real)."""
+    kx = np.fft.fftfreq(N, d=1.0 / N)                 # integer wavenumbers
+    kk = np.hypot(*np.meshgrid(kx, kx))
+    return np.array([((kk >= k - dk/2) & (kk < k + dk/2)).sum() for k in k_bins]) / 2
+
+def chi2(clean, pred, nmodes, skip=2, n_max=None):
+    c = np.asarray(clean)[:, skip:n_max]
+    p = np.asarray(pred)[:, skip:n_max]
+    N = np.asarray(nmodes)[skip:n_max]
+    chi2 = np.sum(N * (p - c)**2 / (2 * c**2), axis=1)   # one value per sample
+    return chi2, chi2 / c.shape[1]                        # total, reduced (dof = n_bins)
+
+def cross_correlation_coefficient(map1, map2):
+
+    ny, nx = map1.shape
+    map1_ft = np.fft.fftshift(np.fft.fft2(map1))
+    map2_ft = np.fft.fftshift(np.fft.fft2(map2))
 
     r, r_max = functions.radial_bin_indices(ny, nx)
-    k_bins = np.arange(0, r_max)
+    rr = r.ravel()
+    cnt = np.bincount(rr, minlength=r_max)[:r_max].astype(float)
+    cnt[cnt == 0] = np.nan
 
-    groundtruth_power_k = np.zeros(r_max)
-    pred_power_k = np.zeros(r_max)
-    cross_power_k = np.zeros(r_max)
+    def radial_mean(a):
+        return np.bincount(rr, weights=a.ravel(), minlength=r_max)[:r_max] / cnt
 
-    for k in k_bins:
-        mask = (r == k)
-        if mask.sum():
-            groundtruth_power_k[k] = groundtruth_power2d[mask].mean()
-            pred_power_k[k] = pred_power2d[mask].mean()
-            cross_power_k[k] = cross_power2d[mask].mean()
-        else:
-            groundtruth_power_k[k] = np.nan
-            pred_power_k[k] = np.nan
-            cross_power_k[k] = np.nan
-
+    pg = radial_mean(np.abs(map1_ft)**2)
+    pp = radial_mean(np.abs(map2_ft)**2)
+    pc = radial_mean(np.real(map1_ft * np.conj(map2_ft)))
     with np.errstate(divide="ignore", invalid="ignore"):
-        r_k = cross_power_k / np.sqrt(groundtruth_power_k * pred_power_k)
-        r_k = np.where(np.isfinite(r_k), r_k, np.nan)
+        r_k = pc / np.sqrt(pg * pp)
 
-    return k_bins, r_k
+    radial_bin_idxs = np.arange(r_max)
+    cross_correation_coefficients = np.where(np.isfinite(r_k), r_k, np.nan)
+    return radial_bin_idxs, cross_correation_coefficients
 
-def eval_cross_correlation(model=None, data=None, model_path=None, data_file=None,
-                            batch_size=BATCH_SIZE, device=DEVICE, img_size=IMG_SIZE):
 
+def calc_multiple_cross_correlation_coefficient(groundtruth_img=None, pred_img=None, model=None,
+                                       model_path=None, data_path=None, device=DEVICE, n=50, noisy_clean_spectrum = False):
+    if groundtruth_img is None or pred_img is None:
+        assert model is not None or model_path is not None
     if model is None:
-        if model_path is None:
-            raise ModelAccessibilityError()
-        else:
-            model = load_model(model_path, device)
-    if data is None:
-        if data_file is None:
-            raise DataAccessibilityError()
-        else:
-            dataloader, _, _ = load_and_prep_eval_data(data_file)
-    else:
-        dataloader = data
+        model, dn_noisy, dn_clean = eval.load_model(model_path, device=device)
+    model.eval()
+    sample = load_random_samples(data_path, n=n)
+    noisy, pred, clean = example_forward_pass(model, sample)
+    groundtruth_img = [functions.to_np(functions.denormalize_map(clean[i], dn_clean)) for i in range(len(clean))]
+    pred_img = [functions.to_np(functions.denormalize_map(pred[i], dn_clean)) for i in range(len(pred))]
 
-    r_k_list = []
-    k_bins = None
+    results = [cross_correlation_coefficient(g, p) for g, p in zip(groundtruth_img, pred_img)]
+    k_bins = results[0][0]
+    r_all = np.array([r for _, r in results])
 
-    with torch.no_grad():
-        for x, y in dataloader:
-            noisy_batch = x.to(device, non_blocking=True)
-            preds = model(noisy_batch)
-            preds_np = preds.cpu().numpy()
-            y_np = y.numpy()
+    if noisy_clean_spectrum:
+        noisy_img = [functions.to_np(functions.denormalize_map(noisy[i], dn_noisy)) for i in range(len(noisy))]
+        results_noisy_clean = [cross_correlation_coefficient(d, g) for d, g in zip(noisy_img, groundtruth_img)]
+        r_all_noisy_clean = np.array([r for _, r in results_noisy_clean])
+        return k_bins, r_all, r_all_noisy_clean
+    
+    return k_bins, r_all, 0
 
-            for i in range(preds_np.shape[0]):
-                pred_img = preds_np[i, 0]
-                groundtruth_img = y_np[i, 0]
-
-                current_k_bins, current_r_k = cross_correlation_coefficient(groundtruth_img, pred_img)
-                if k_bins is None:
-                    k_bins = current_k_bins
-
-                r_k_list.append(current_r_k)
-
-    return k_bins, r_k_list
+def plot_cross_correlation(ell = None, k_bins = None, L = IMG_SIZE, cross_correlations = None, groundtruth_img = None, pred_img = None, ell_min = 0, ell_max = 2000, number_of_cc = 50, r_noisy_clean = None, save_path = ""):
+    if ell is None:
+        assert k_bins is not None, "ell and k_bins cannot both be None. One has to be given."
+        ell = k_bins * 2*np.pi / L
+    if cross_correlations is None:
+        k_bins, cross_correlations, r_noisy_clean = calc_multiple_cross_correlation_coefficient(groundtruth_img, pred_img)
+    ell = ell[2:]
+    valid = (ell<ell_max)
+    ell = ell[valid]
+    cross_correlations = np.array(cross_correlations)[:, 2:]
+    cross_correlations = cross_correlations[:, valid]
+    for i in range(min(len(cross_correlations)-1, number_of_cc-1)):
+        plt.plot(ell, cross_correlations[i], color="red", alpha=0.1)
+        plt.ylim(0, 1.05)
+        plt.ylabel(r"Cross-Correlation coefficient $r(\ell)$", fontsize=8)
+        plt.xlabel(r"Multipoles $\ell$", fontsize=8)
+    plt.plot(ell, cross_correlations[min(len(cross_correlations), number_of_cc)-1], color="red", alpha=0.1, label = "prediction-groundtruth")
+    if r_noisy_clean.any():
+        r_noisy_clean = r_noisy_clean[0]
+        r_noisy_clean[2:]
+        plt.plot(ell, r_noisy_clean[2:], color = "black", alpha = 0.2, label = "noisy-groundtruth")
+        plt.legend()
+    plt.savefig(save_path)
+    return None
 
 def _summary_lines(name, values, fmt):
     return [
@@ -564,6 +660,32 @@ def write_eval_results(eval_file=EVAL_FILE, total_mse=None, mse_list=None,
             k_bins, r_k_list = cross_corr_result
             f.write("".join(l + "\n" for l in _radial_profile_lines(
                 "Cross-correlation", k_bins, np.array(r_k_list))))
+
+def load_loss_data_per_epoch(log_path):
+    with open(log_path) as f:
+        text = f.read()
+
+    patterns = {
+        "loss_disc":  r"discriminator loss:\s*([-+0-9.eE]+)",
+        "loss_gen":   r"generator loss:\s*([-+0-9.eE]+)",
+        "loss_recon": r"reconstruction loss:\s*([-+0-9.eE]+)",
+        "loss_adv":   r"adversarial loss:\s*([-+0-9.eE]+)",
+    }
+
+    losses = {
+        name: np.array(re.findall(pat, text, flags=re.IGNORECASE), dtype=float)
+        for name, pat in patterns.items()
+    }
+
+    loss_disc  = losses["loss_disc"]
+    loss_gen   = losses["loss_gen"]
+    loss_recon = losses["loss_recon"]
+    loss_adv   = losses["loss_adv"]
+
+    print({k: v.shape for k, v in losses.items()})   # each should be (64,)
+    return loss_disc, loss_gen, loss_recon, loss_adv
+
+
 
 
 def main():

@@ -132,7 +132,10 @@ class eval_config(NamedTuple):
     BATCH_SIZE = 8
 
 
-    IMG_SIZE = 256
+    pixel_n = 256
+    img_size = 512                      #image size in arcmin
+    pixel_size = 2.0                    # pixel size in arcmin
+
     MAX_VAL = 1 # for psnr
     DATA_RANGE = [0, MAX_VAL]
 

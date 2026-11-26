@@ -174,4 +174,7 @@ def write_doc(run_type: str,
 
     print("Documentation written to:", doc_path)
     return None
+
+def to_np(a):
+    return a.detach().cpu().numpy().squeeze() if hasattr(a, "detach") else np.asarray(a).squeeze()
      
